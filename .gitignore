@@ -1,0 +1,10 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+www/CZData.json
+ccrc_soc_comp.dta
+CZ_job_post.rds
+hdallyears.dta
+lightcast-soc-year-county-2025-02-28.csv
+mapboxtoken_setup.R
