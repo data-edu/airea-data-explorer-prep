@@ -29,9 +29,8 @@ document.addEventListener("DOMContentLoaded", function () {
   // When the map has finished loading, add the legend, mask layer, etc.
 map.on("load", function () {
   addLegend();
-  
-  
-  loadCZDataForYear("2024");
+  loadCZDataForYear(2023);
+  //loadInstituteDataForYear();
   // --- Add mask layer: Cover areas outside the US ---
   map.addSource("mask", {
     type: "geojson",
@@ -54,7 +53,6 @@ map.on("load", function () {
   });
 });
 
-  
   // Function to add a legend to the map container
   function addLegend() {
     const legend = document.createElement("div");
@@ -76,7 +74,7 @@ map.on("load", function () {
   }
   
   
-    // Function to load CZ data for a given year using fetch
+  //Function to load Comuting Zone Data for a given year using fetch
   function loadCZDataForYear(year) {
     const czUrl = "CZData_" + year + ".json";  // Construct file name, e.g., "CZData_2023.json"
     fetch(czUrl, { cache: "force-cache" })
@@ -113,6 +111,81 @@ map.on("load", function () {
       });
   }
   
+   // 🟢 Receiving loadYear messages → loading CZ layer
+   Shiny.addCustomMessageHandler("loadYear", function(year) {
+     console.log("[loadYear] received:", year);
+     loadCZDataForYear(year);
+  });
+  
+  
+   // Function: load Institute data for a given year using fetch.
+  function loadInstituteDataForYear(year) {
+    const instUrl = "InstituteData_" + year + ".json";  // 例如 "InstituteData_2024.json"
+    fetch(instUrl, { cache: "force-cache" })
+      .then(response => response.json())
+      .then(function(data) {
+        if (map.getSource("institutes")) {
+          map.getSource("institutes").setData(data);
+        } else {
+          map.addSource("institutes", {
+            type: "geojson",
+            data: data
+          });
+          map.addLayer({
+            id: "institutes-layer",
+            type: "circle",
+            source: "institutes",
+            paint: {
+              "circle-radius": [
+                "interpolate",
+                ["linear"],
+                ["get", "inst_perc_green_tot"],
+                0, 4,
+                1, 12
+              ],
+              "circle-color": "#FF5733",       // Customize the color as needed
+              "circle-stroke-width": 1,
+              "circle-stroke-color": "#FFFFFF"
+            }
+          });
+          
+         // 
+          
+          // Add click event: show popup with the percentage value.
+          map.on("click", "institutes-layer", function(e) {
+            if (e.features.length > 0) {
+              const feature = e.features[0];
+              const perc = Number(feature.properties.inst_perc_green_tot);
+              const percText = (perc * 100).toFixed(1) + "%";
+              new mapboxgl.Popup()
+                .setLngLat(e.lngLat)
+                .setHTML("<strong>" + feature.properties.instnm + "</strong><br>Green Completion: " + percText)
+                .addTo(map);
+            }
+          });
+          // Change cursor style on hover.
+          map.on("mouseenter", "institutes-layer", function() {
+            map.getCanvas().style.cursor = "pointer";
+          });
+          map.on("mouseleave", "institutes-layer", function() {
+            map.getCanvas().style.cursor = "";
+          });
+        }
+      })
+      .catch(function(error) {
+        console.error("Error loading " + instUrl + ":", error);
+      });
+  }
+   
+  
+
+// 🟥 Shiny message handler: load institute data for a given year
+   Shiny.addCustomMessageHandler("loadInstituteYear", function(year) {
+     console.log("[loadInstituteYear] received:", year);
+     loadInstituteDataForYear(year);
+  });
+
+ /* 
   // Shiny message handler: update CZ layer based on the provided GeoJSON data
   // This handler will be triggered when the user changes the year in the UI.
   Shiny.addCustomMessageHandler("loadYear", function(year) {
@@ -120,6 +193,15 @@ map.on("load", function () {
     loadCZDataForYear(year);
   });
   
+  // Shiny message handler: load institute data for a given year
+  // This handler will be triggered when the user changes the year in the UI.
+  Shiny.addCustomMessageHandler("loadInstituteYear", function(year) {
+    console.log("Received year from server:", year);
+    loadInstituteDataForYear(year);
+   });
+ */
+ 
+ 
   // Function to update the commuting zone layer with CZ GeoJSON data
   function updateCZLayer(czGeojson) {
     if (map.getSource("cz")) {
