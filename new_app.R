@@ -6,7 +6,7 @@ library(sf)
 library(ggplot2)
 library(scales)
 library(plotly)
-source("mapboxtoken_setup.R")  # This file defines the mapbox_token variable
+source("mapboxtoken_setup.R")  # This file defines the mapbox_token variable, which is used for Mapbox access
 
 
 ####### Supply Data (for institution search)####################
