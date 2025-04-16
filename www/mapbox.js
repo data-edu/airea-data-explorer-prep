@@ -81,7 +81,7 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 Shiny.addCustomMessageHandler("resizeMap", function(message) {
-  // 调用 Mapbox 的 resize() 方法，重新计算画布大小
+  // call the resize function on the map instance
   if (map) {
     map.resize();
   }
