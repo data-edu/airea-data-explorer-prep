@@ -36,93 +36,83 @@ CZ_job_post <- CZ_job_post %>%
 # ============================================================
 # User Interface (UI) Design
 # ============================================================
+# ============================================================
+# Updated UI: Use Tab Panels for Different Pages
+# ============================================================
+
 ui <- fluidPage(
-  
-  # -------------------------------
-  # Page Style: Include Custom CSS and Hide the Map Until Fully Loaded
-  # -------------------------------
-  tags$head( includeCSS("www/style.css") ),
+  tags$head(includeCSS("www/style.css")),
   tags$style(HTML("
     #map { 
       visibility: hidden;
+      width: 100%;
     }
   ")),
-  
-  # Page Title
   titlePanel("CCRC Green Seek"),
   
-  # -------------------------------
-  # Layout: Using fluidRow to Divide the Page into Left and Right Columns
-  # Left Column (width = 4): Contains the year selector and treemap plot
-  # Right Column (width = 8): Contains the institution search controls and map container
-  # -------------------------------
-  fluidRow(
-    # Left Column: Filters and Treemap Plot
-    column(4,
-           wellPanel(
-             # Year Selector: Filter CZ data based on year; choices sorted in descending order.
-             selectInput("selected_year",
-                         "Select Year:",
-                         choices = sort(unique(CZ_job_post$YEAR), decreasing = TRUE),
-                         selected = max(CZ_job_post$YEAR))
-           ),
-           wellPanel(
-             # Display the Treemap Plot directly below the year selector.
-             # This plot (a plotly object) is pre-generated and will be updated based on the selected year.
-             plotlyOutput("treemapPlot", height = "600px")
-           )
-    ),
-    # Right Column: Institution Search Controls and Map
-    column(8,
-           wellPanel(
+  # 共享年份选择器
+  wellPanel(
+    selectInput("selected_year", "Select Year:",
+                choices = sort(unique(CZ_job_post$YEAR), decreasing = TRUE),
+                selected = max(CZ_job_post$YEAR))
+  ),
+  
+  # tabsetPanel 指定 id="tabs"，并给每个 tab 一个 value
+  tabsetPanel(
+    id = "tabs",
+    # ----- Tab 1: Treemap -----
+    tabPanel("Treemap", value = "treemap",
              fluidRow(
-               # Search Input: A selectizeInput for institution names.
-               # Initially, choices are empty and will be updated in the server.
-               column(8,
-                      selectizeInput("search_term", "Search by Institution:",
-                                     choices = NULL,  # Initially empty; to be updated dynamically by the server.
-                                     options = list(
-                                       placeholder = "Type institution name...",
-                                       openOnFocus = FALSE,
-                                       maxOptions = 10
-                                     ),
-                                     width = "100%")
-               ),
-               # Search Button and Clear Button: User clicks to trigger search or clear the map.
-               column(4,
-                      div(style = "margin-top: 25px;",
-                          actionButton("search_btn", "Search"),
-                          tags$button("Clear", onclick = "clearMap()", 
-                                      style = "margin-left: 10px;", class = "btn btn-default")
+               column(12,
+                      wellPanel(
+                        plotlyOutput("treemapPlot", height = "600px")
                       )
                )
              )
-           ),
-           # Map Container: The map will render inside this div (ID "map"), with a height of 700px.
-           div(id = "map", style = "height:700px;")
-    )
-  ),
-  
-  # -------------------------------
-  # Additional Plot Panels: CZ Plot and Trend Plot
-  # -------------------------------
-  fluidRow(
-    # Left Pane: CZ Plot showing commuting zone data
-    column(6,
-           wellPanel(
-             plotlyOutput("cz_plot", height = "300px")
-           )
     ),
-    # Right Pane: Trend Plot showing green job postings trends (from 2010 to 2024)
-    column(6,
-           wellPanel(
-             plotlyOutput("trendPlot", height = "300px")
-           )
+    
+    # ----- Tab 2: Demand Page -----
+    tabPanel("Demand Page", value = "demand",
+             fluidRow(
+               column(6,
+                      wellPanel(
+                        plotlyOutput("cz_plot", height = "300px")
+                      )
+               ),
+               column(6,
+                      wellPanel(
+                        plotlyOutput("trendPlot", height = "300px")
+                      )
+               )
+             )
+    ),
+    # ----- Tab 3: Main Map -----
+    tabPanel("Main Map",    value = "mainmap",    # 这是第三个 tab
+             fluidRow(
+               column(12,
+                      wellPanel(
+                        fluidRow(
+                          column(8,
+                                 selectizeInput("search_term", "Search by Institution:",
+                                                choices = NULL, options = list(), width = "100%")
+                          ),
+                          column(4,
+                                 div(style="margin-top:25px;",
+                                     actionButton("search_btn","Search"),
+                                     tags$button("Clear", onclick="clearMap()", class="btn btn-default")
+                                 )
+                          )
+                        )
+                      ),
+                      div(id="map", style="height:700px; width:100%;")
+               )
+             )
     )
   ),
   
+  
   # -------------------------------
-  # Footer: Display Credits, Source Code Link, and Acknowledgment
+  # Footer
   # -------------------------------
   fluidRow(
     column(12, align = "center",
@@ -134,27 +124,32 @@ ui <- fluidPage(
   ),
   
   # -------------------------------
-  # Include Front-End Dependencies (Mapbox GL JS, Turf.js, Custom JS)
+  # Front-End Dependencies (Mapbox, Turf.js, Custom JS)
   # -------------------------------
   tags$head(
-    # Include Mapbox GL JS CSS file for styling the map.
     tags$link(href = "https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.css", rel = "stylesheet"),
-    # Include Mapbox GL JS library.
     tags$script(src = "https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.js"),
-    # Include the custom JS file that loads static data and handles front-end interactions.
     tags$script(src = "mapbox.js"),
-    # Pass the mapbox_token from R to the front-end as a global variable (mapboxToken).
     tags$script(HTML(paste0("const mapboxToken = '", mapbox_token, "';"))),
-    # Include Turf.js library for geographic processing on the front-end (if needed).
     tags$script(src = "https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js")
   )
 )
+
+
+
 
 
 # ============================================================
 # Server Logic
 # ============================================================
 server <- function(input, output, session) {
+  
+  # 当用户切换到 Main Map 这个 tab 时，发送自定义消息 "resizeMap"
+  observeEvent(input$tabs, {
+    if (input$tabs == "mainmap") {
+      session$sendCustomMessage("resizeMap", list())
+    }
+  })
   
   # -------------------------------
   # Respond to Year Selection Changes

@@ -1,11 +1,15 @@
+// ============================================================
+// MAP INITIALIZATION AND GLOBAL SETUP
+// ============================================================
+
 document.addEventListener("DOMContentLoaded", function () {
   // Set the Mapbox Access Token (assumed to be defined in app.R via tags$script)
   mapboxgl.accessToken = mapboxToken;
-  
-  // Initialize the map using the navigation-day-v1 style,
-  // centered on the US with a zoom level of 3.5,
-  // with maximum bounds roughly covering the US,
-  // and using the mercator (planar) projection.
+
+  // ------------------------------
+  // Initialize the Map
+  // ------------------------------
+  // Create a new Mapbox map instance with the specified style, center (US), zoom level, max bounds, and projection.
   const map = new mapboxgl.Map({
     container: "map",
     style: "mapbox://styles/mapbox/navigation-day-v1",
@@ -17,43 +21,81 @@ document.addEventListener("DOMContentLoaded", function () {
     ],
     projection: { name: "mercator" }
   });
-  
-  // Add navigation controls to the map
+
+  // ------------------------------
+  // Add Navigation Controls
+  // ------------------------------
+  // Add built-in Mapbox navigation controls (zoom, rotate, etc.) to the map.
   map.addControl(new mapboxgl.NavigationControl());
-  
-  // Global variables: store the search popup, hover popup, and currently hovered feature ID
+
+  // ------------------------------
+  // Define Global Variables
+  // ------------------------------
+  // searchPopup: holds the popup for search results.
+  // hoverPopup: holds the popup shown when hovering over a feature.
+  // hoveredFeatureId: stores the ID of the current feature being hovered.
   let searchPopup;
   let hoverPopup = new mapboxgl.Popup({ closeButton: false, closeOnClick: false });
   let hoveredFeatureId = null;
-  
-  // When the map has finished loading, add the legend, mask layer, etc.
-map.on("load", function () {
-  addLegend();
-  loadCZDataForYear(2023);
-  //loadInstituteDataForYear();
-  // --- Add mask layer: Cover areas outside the US ---
-  map.addSource("mask", {
-    type: "geojson",
-    data: "mask_polygon.geojson"  // Path relative to the www/ folder
-  });
-  
-  map.addLayer({
-    id: "mask-layer",
-    type: "fill",
-    source: "mask",
-    paint: {
-      "fill-color": "#ffffff",  // Adjust the color as needed
-      "fill-opacity": 1.0
+
+  // ============================================================
+  // MAP LOAD EVENT: Add Legend, CZ Data, Mask Layer, etc.
+  // ============================================================
+  map.on("load", function () {
+    // Add the legend to the map container.
+    addLegend();
+
+    // Load the Commuting Zone (CZ) data for a default year.
+    loadCZDataForYear(2023);
+    
+
+    // --- Add Mask Layer ---
+    // This layer covers areas outside the US by loading a precomputed GeoJSON mask.
+    map.addSource("mask", {
+      type: "geojson",
+      data: "mask_polygon.geojson"  // File path relative to the www/ folder
+    });
+    map.addLayer({
+      id: "mask-layer",
+      type: "fill",
+      source: "mask",
+      paint: {
+        "fill-color": "#ffffff",  // Color for the mask
+        "fill-opacity": 1
+      }
+    });
+    
+    // Load the CZ data for the default year (2023) and add it to the map.
+    //loadInstituteDataForYear(2023);
+    loadInstituteDataForYear(2023);
+    // Once all layers are loaded (i.e., the map is idle), make the map visible.
+    map.on("idle", function() {
+    // ensure the institutes layer is on top
+    if (map.getLayer("institutes-layer")) {
+      map.moveLayer("institutes-layer");
     }
-  });
-  
-  // Once the map is idle (all layers loaded), make the map container visible
-  map.on("idle", function() {
+    // then show the map
     document.getElementById("map").style.visibility = "visible";
   });
+  
 });
 
-  // Function to add a legend to the map container
+Shiny.addCustomMessageHandler("resizeMap", function(message) {
+  // 调用 Mapbox 的 resize() 方法，重新计算画布大小
+  if (map) {
+    map.resize();
+  }
+});
+
+  // ============================================================
+  // FUNCTION DEFINITIONS
+  // ============================================================
+
+  // ------------------------------
+  // Function: addLegend
+  // ------------------------------
+  // Creates and styles an HTML legend for the map that explains the color ranges
+  // for green job postings and appends it to the map container.
   function addLegend() {
     const legend = document.createElement("div");
     legend.id = "legend";
@@ -72,65 +114,86 @@ map.on("load", function () {
       '<div><span style="background-color: #66c456; width: 20px; height: 20px; display: inline-block; margin-right: 5px; border-radius: 50%;"></span>&gt; 1000</div>';
     map.getContainer().appendChild(legend);
   }
-  
-  
-  //Function to load Comuting Zone Data for a given year using fetch
+
+  // ------------------------------
+  // Function: loadCZDataForYear
+  // ------------------------------
+  // Loads the Commuting Zone (CZ) data for a given year.
+  // It constructs the file name (e.g., "CZData_2023.json"), fetches the GeoJSON data,
+  // adds the CZ layer with specified color and style properties, then updates the layer’s data.
   function loadCZDataForYear(year) {
-    const czUrl = "CZData_" + year + ".json";  // Construct file name, e.g., "CZData_2023.json"
+    const czUrl = "CZData_" + year + ".json";  // e.g., "CZData_2023.json"
     fetch(czUrl, { cache: "force-cache" })
       .then(response => response.json())
       .then(function(data) {
-              map.addLayer({
-        id: "cz-layer",
-        type: "fill",
-        source: "cz",
-        paint: {
-          // Define color steps for green_job_postings; adjust thresholds as needed
-          "fill-color": [
-            "step",
-            ["get", "green_job_postings"],
-            "#d0f3d0", 100,
-            "#a1e9a1", 500,
-            "#99EA85", 1000,
-            "#66c456"
-          ],
-          "fill-opacity": [
-            "case",
-            ["boolean", ["feature-state", "hover"], false],
-            1,
-            0.8
-          ],
-          "fill-outline-color": "#ffffff"
-        }
-      });
-        // Update or add the CZ layer using the fetched data
+        // Add the CZ layer if it does not exist.
+        map.addLayer({
+          id: "cz-layer",
+          type: "fill",
+          source: "cz",
+          paint: {
+            "fill-color": [
+              "step",
+              ["get", "green_job_postings"],
+              "#d0f3d0", 100,
+              "#a1e9a1", 500,
+              "#99EA85", 1000,
+              "#66c456"
+            ],
+            "fill-opacity": [
+              "case",
+              ["boolean", ["feature-state", "hover"], false],
+              1,
+              0.7
+            ],
+            "fill-outline-color": "#000000"
+          }
+        });
+        // Update the CZ data source with the fetched GeoJSON data.
         updateCZLayer(data);
       })
       .catch(function(error) {
         console.error("Error loading " + czUrl + ":", error);
       });
   }
-  
-   // 🟢 Receiving loadYear messages → loading CZ layer
-   Shiny.addCustomMessageHandler("loadYear", function(year) {
-     console.log("[loadYear] received:", year);
-     loadCZDataForYear(year);
-  });
-  
-  
-   // Function: load Institute data for a given year using fetch.
+
+  // ------------------------------
+  // Function: updateCZLayer
+  // ------------------------------
+  // Updates the GeoJSON data for the Commuting Zone (CZ) layer.
+  // If the source "cz" exists, its data is refreshed; otherwise, a new source is created.
+  function updateCZLayer(czGeojson) {
+    if (map.getSource("cz")) {
+      map.getSource("cz").setData(czGeojson);
+    } else {
+      map.addSource("cz", {
+        type: "geojson",
+        data: czGeojson
+      });
+    }
+  }
+
+  // ------------------------------
+  // Function: loadInstituteDataForYear
+  // ------------------------------
+  // Loads institution data for a given year by fetching the corresponding GeoJSON file.
+  // If the "institutes" source already exists, its data is updated; otherwise, a new source and layer are added.
+  // The institution layer displays data as circles sized by the "inst_perc_green_tot" property.
   function loadInstituteDataForYear(year) {
-    const instUrl = "InstituteData_" + year + ".json";  // 例如 "InstituteData_2024.json"
+    const instUrl = "InstituteData_" + year + ".json";  // e.g., "InstituteData_2024.json"
     fetch(instUrl, { cache: "force-cache" })
       .then(response => response.json())
       .then(function(data) {
         if (map.getSource("institutes")) {
+          // Update existing source data.
           map.getSource("institutes").setData(data);
         } else {
+          // Add new source for institutions.
           map.addSource("institutes", {
             type: "geojson",
             data: data
           });
+          // Add a new circle layer for institutions with radius based on inst_perc_green_tot.
           map.addLayer({
             id: "institutes-layer",
             type: "circle",
@@ -143,15 +206,18 @@ map.on("load", function () {
                 0, 4,
                 1, 12
               ],
-              "circle-color": "#FF5733",       // Customize the color as needed
+              "circle-color": "#B22222",       // Customize the color as needed
               "circle-stroke-width": 1,
               "circle-stroke-color": "#FFFFFF"
             }
           });
           
-         // 
           
-          // Add click event: show popup with the percentage value.
+          // ------------------------------
+          // Event: Institution Layer Click
+          // ------------------------------
+          // When a user clicks a circle on the institution layer, show a popup with the institution name
+          // and its green completion percentage.
           map.on("click", "institutes-layer", function(e) {
             if (e.features.length > 0) {
               const feature = e.features[0];
@@ -163,7 +229,10 @@ map.on("load", function () {
                 .addTo(map);
             }
           });
-          // Change cursor style on hover.
+          // ------------------------------
+          // Event: Change Cursor on Hover for Institution Layer
+          // ------------------------------
+          // Change the cursor style to "pointer" when hovering over the institution layer.
           map.on("mouseenter", "institutes-layer", function() {
             map.getCanvas().style.cursor = "pointer";
           });
@@ -176,51 +245,62 @@ map.on("load", function () {
         console.error("Error loading " + instUrl + ":", error);
       });
   }
-   
-  
 
-// 🟥 Shiny message handler: load institute data for a given year
-   Shiny.addCustomMessageHandler("loadInstituteYear", function(year) {
-     console.log("[loadInstituteYear] received:", year);
-     loadInstituteDataForYear(year);
-  });
+  // ============================================================
+  // SHINY CUSTOM MESSAGE HANDLERS
+  // ============================================================
 
- /* 
-  // Shiny message handler: update CZ layer based on the provided GeoJSON data
-  // This handler will be triggered when the user changes the year in the UI.
+  // ------------------------------
+  // Handler: loadYear
+  // ------------------------------
+  // Receives the selected year from the Shiny server to load the corresponding CZ data.
   Shiny.addCustomMessageHandler("loadYear", function(year) {
-    console.log("Received year from server:", year);
+    console.log("[loadYear] received:", year);
     loadCZDataForYear(year);
   });
-  
-  // Shiny message handler: load institute data for a given year
-  // This handler will be triggered when the user changes the year in the UI.
-  Shiny.addCustomMessageHandler("loadInstituteYear", function(year) {
-    console.log("Received year from server:", year);
-    loadInstituteDataForYear(year);
-   });
- */
- 
- 
-  // Function to update the commuting zone layer with CZ GeoJSON data
-  function updateCZLayer(czGeojson) {
-    if (map.getSource("cz")) {
-      map.getSource("cz").setData(czGeojson);
-    } else {
-      map.addSource("cz", {
-        type: "geojson",
-        data: czGeojson
-      });
 
-    }
-  }
-  
-  
-  // Shiny message handler: update commuting zone layer based on the provided GeoJSON data
+  // ------------------------------
+  // Handler: loadInstituteYear
+  // ------------------------------
+  // Receives the selected year from the Shiny server to load institution data.
+  Shiny.addCustomMessageHandler("loadInstituteYear", function(year) {
+    console.log("[loadInstituteYear] received:", year);
+    loadInstituteDataForYear(year);
+  });
+
+  // ------------------------------
+  // Handler: updateCZ
+  // ------------------------------
+  // Updates the CZ layer when new GeoJSON data is received from the Shiny server.
   Shiny.addCustomMessageHandler("updateCZ", function(czGeojson) {
     updateCZLayer(czGeojson);
   });
-  // Mouse move event on the commuting zones layer: display commuting zone info
+
+  // ------------------------------
+  // Handler: updateSearch
+  // ------------------------------
+  // When a search result is sent from the Shiny server, display a popup at the specified location
+  // and smoothly fly to that area with an increased zoom level.
+  Shiny.addCustomMessageHandler("updateSearch", function (coords) {
+    if (searchPopup) {
+      searchPopup.remove();
+    }
+    searchPopup = new mapboxgl.Popup()
+      .setLngLat([coords.lng, coords.lat])
+      .setHTML(coords.popup)
+      .addTo(map);
+    map.flyTo({ center: [coords.lng, coords.lat], zoom: 8 });
+  });
+
+  // ============================================================
+  // MAP INTERACTION EVENTS (Commuting Zones)
+  // ============================================================
+
+  // ------------------------------
+  // Event: Mouse Move on CZ Layer
+  // ------------------------------
+  // As the user moves the mouse over a commuting zone, update the feature state to reflect
+  // the hover and display a popup with details (CZ identifier and green job postings count).
   map.on("mousemove", "cz-layer", function(e) {
     console.log("Mousemove on cz-layer:", e.features);
     if (e.features.length > 0) {
@@ -236,8 +316,11 @@ map.on("load", function () {
         .addTo(map);
     }
   });
-  
-  // Mouse leave event on the commuting zones layer: remove hover popup
+
+  // ------------------------------
+  // Event: Mouse Leave from CZ Layer
+  // ------------------------------
+  // When the mouse leaves the commuting zone layer, remove the hover state and popup.
   map.on("mouseleave", "cz-layer", function() {
     if (hoveredFeatureId !== null) {
       map.setFeatureState({ source: "cz", id: hoveredFeatureId }, { hover: false });
@@ -245,20 +328,16 @@ map.on("load", function () {
     hoveredFeatureId = null;
     hoverPopup.remove();
   });
-  
-  // Shiny message handler for search results: display popup and fly to location
-  Shiny.addCustomMessageHandler("updateSearch", function (coords) {
-    if (searchPopup) {
-      searchPopup.remove();
-    }
-    searchPopup = new mapboxgl.Popup()
-      .setLngLat([coords.lng, coords.lat])
-      .setHTML(coords.popup)
-      .addTo(map);
-    map.flyTo({ center: [coords.lng, coords.lat], zoom: 8 });
-  });
-  
-  // Global function clearMap(), called directly by the Clear button
+
+  // ============================================================
+  // GLOBAL UTILITY FUNCTIONS
+  // ============================================================
+
+  // ------------------------------
+  // Function: clearMap
+  // ------------------------------
+  // This function, called by the Clear button, removes any search result popup and resets the map view
+  // back to its default center and zoom level.
   window.clearMap = function () {
     if (searchPopup) {
       searchPopup.remove();
@@ -266,4 +345,5 @@ map.on("load", function () {
     }
     map.flyTo({ center: [-95, 40], zoom: 3.5 });
   };
+
 });
