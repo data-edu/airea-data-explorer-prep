@@ -41,7 +41,7 @@ ui <- fluidPage(
   # -------------------------------
   # Page Style: Include Custom CSS and Hide the Map Until Fully Loaded
   # -------------------------------
-  tags$head( includeCSS("www/style.css") ),
+  # tags$head( includeCSS("www/style.css") ),
   tags$style(HTML("
     #map { 
       visibility: hidden;
