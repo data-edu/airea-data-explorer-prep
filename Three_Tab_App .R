@@ -10,6 +10,7 @@ library(sf)            # For handling spatial data
 library(ggplot2)       # Data visualization
 library(scales)        # Formatting for plots
 library(plotly)        # For interactive plotting
+library(shinythemes)
 source("mapboxtoken_setup.R")  # Loads mapbox_token used for Mapbox access
 
 # ============================================================
@@ -40,7 +41,7 @@ CZ_job_post <- CZ_job_post %>%
 # Updated UI: Use Tab Panels for Different Pages
 # ============================================================
 
-ui <- fluidPage(
+ui <- fluidPage(theme = shinytheme("cerulean"),
   # tags$head(includeCSS("www/style.css")),
   tags$style(HTML("
     #map { 
@@ -235,6 +236,13 @@ server <- function(input, output, session) {
   output$trendPlot <- renderPlotly({
     readRDS("p_SOC_plotly.rds")
   })
+  
+  # JR added just as a placeholder until we get the data from Matias/Cameron
+  # output$table <- renderTable( {
+  #   
+  #   read_rds("my-table.rds")
+  #   
+  # })
   
   output$cz_plot <- renderPlotly({
     readRDS("p_CZ_plotly.rds")
