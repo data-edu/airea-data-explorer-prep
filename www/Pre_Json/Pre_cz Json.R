@@ -14,9 +14,7 @@ for (yr in years) {
 }
 
 
-
 cz_0302_geo_sf1
-
 unique(cz_0302_geo_sf1$YEAR)
 
 

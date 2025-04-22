@@ -16,7 +16,6 @@ county20<- st_read("county20/county20.shp")
 county20 <- county20 %>%
   select(1,2,4)
 
-
 cz20<- st_read("cz20/cz20.shp")
 
 
@@ -103,9 +102,15 @@ CZ_jobpostings_final1 <- st_simplify(CZ_jobpostings_final1, dTolerance = 0.05, p
 write_rds(CZ_jobpostings_final1, "CZ_job_post.rds")
 
 
+
+
+
+# -------------------------------
+# CZ_Job Posting Data version 2025-03-02
+# -------------------------------
+
 library(readr)
 test_0302 <- read_csv("cz_postings-2025-03-02.csv")
-
 #### 0302 Josh data
 library(readr)
 cz_0302 <- read_csv("cz_postings-2025-03-02.csv")
@@ -122,6 +127,11 @@ cz_0302_geo <- cz_0302_geo %>%
      rename(CZ20 = cz,YEAR =year, green_job_postings = num_postings)
 
 
+### delete year 2024
+cz_0302_geo <- cz_0302_geo %>%
+  filter(YEAR != 2024)
+
+
 cz_0302_geo_sf <- st_as_sf(cz_0302_geo)
 
 cz_0302_geo_sf1 <- st_transform(cz_0302_geo_sf, crs = 4326)
@@ -131,39 +141,15 @@ cz_0302_geo_sf1 <- st_simplify(cz_0302_geo_sf1, dTolerance = 0.05, preserveTopol
 
 write_rds(cz_0302_geo_sf1, "CZ_job_post.rds")
 
-########
-# trend data across years
-trend_data <- cz_0302_geo %>%
-  select(1,2,3)%>%
-  filter(YEAR >= 2010, YEAR <= 2024) %>%
-  group_by(YEAR) %>%
-  summarise(total_green = sum(green_job_postings, na.rm = TRUE)) %>%
-  ungroup()
-
-library(readr)
-write_rds(trend_data, "trend_data.rds")
 
 
 
 
 
-##### read hdallyears dta
-library(haven)
-hdallyears_new <- read_dta("hdallyears.dta")
-# view all hdallyears_new variables names
-colnames(hdallyears_new)
-
-soccipxwalk <- read_dta("soccipxwalk.dta")
-View(soccipxwalk)
 
 
-##### supply data preparation using data from Matias
-library(haven)
-ccrc_soc_comp <- read_dta("ccrc_soc_comp.dta")
-View(ccrc_soc_comp)
 
-#### print col names
-colnames(ccrc_soc_comp)
 
-library(dplyr)
-unique(ccrc_soc_comp$InstitutionName)
+
+
+
