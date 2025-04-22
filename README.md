@@ -67,6 +67,12 @@ interactive charts
 
     - Replace `"YOUR_MAPBOX_ACCESS_TOKEN"` with your actual Mapbox
       token.
+      
+4. **Download Private Data**
+    
+    - Presently, we are storing the required private data in a [Sharepoint folder]. 
+    We plan to make this public in the future. This folder contains:
+      - `cz_job_post.rds`
 
 ## Data Preparation
 
