@@ -41,7 +41,7 @@ CZ_job_post <- CZ_job_post %>%
 # ============================================================
 
 ui <- fluidPage(
-  tags$head(includeCSS("www/style.css")),
+  # tags$head(includeCSS("www/style.css")),
   tags$style(HTML("
     #map { 
       visibility: hidden;
