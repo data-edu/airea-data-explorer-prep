@@ -50,14 +50,14 @@ ui <- fluidPage(
   ")),
   titlePanel("CCRC Green Seek"),
   
-  # 共享年份选择器
+  # year selector
   wellPanel(
     selectInput("selected_year", "Select Year:",
                 choices = sort(unique(CZ_job_post$YEAR), decreasing = TRUE),
                 selected = max(CZ_job_post$YEAR))
   ),
   
-  # tabsetPanel 指定 id="tabs"，并给每个 tab 一个 value
+  # tabsetPanel specify id=“tabs” and give each tab a value
   tabsetPanel(
     id = "tabs",
     # ----- Tab 1: Treemap -----
@@ -87,7 +87,7 @@ ui <- fluidPage(
              )
     ),
     # ----- Tab 3: Main Map -----
-    tabPanel("Main Map",    value = "mainmap",    # 这是第三个 tab
+    tabPanel("Main Map",    value = "mainmap",   
              fluidRow(
                column(12,
                       wellPanel(
@@ -144,7 +144,7 @@ ui <- fluidPage(
 # ============================================================
 server <- function(input, output, session) {
   
-  # 当用户切换到 Main Map 这个 tab 时，发送自定义消息 "resizeMap"
+  # Send a custom message “resizeMap” when the user switches to the Main Map tab.
   observeEvent(input$tabs, {
     if (input$tabs == "mainmap") {
       session$sendCustomMessage("resizeMap", list())
