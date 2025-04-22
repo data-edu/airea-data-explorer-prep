@@ -1,5 +1,5 @@
 # prepare_mask_polygon.R
-# 目的：从 rnaturalearth 获取美国边界，并生成“世界 - 美国”的差集，用于在 Mapbox 上做掩膜
+# Purpose: Retrieve US boundary from rnaturalearth and generate the difference (world - USA) for use as a mask in Mapbox
 
 library(rnaturalearth)
 library(rnaturalearthdata)
@@ -7,33 +7,31 @@ library(sf)
 library(dplyr)
 library(geojsonio)
 
-# . 获取美国各州边界 (states)，并转换为 sf 格式
-# ne_states() 返回全世界各国的“州/省”边界信息，我们只筛选美国
+# Get the US states boundaries and convert to sf format
+# ne_states() returns state/province boundaries worldwide; we filter for the United States only
 us_states <- ne_states(country = "United States of America", returnclass = "sf")
 
-
-
-# . 将所有州合并为一个多边形（全国边界）
+# Merge all states into a single polygon (national boundary)
 us_polygon <- st_union(us_states)
 
-# . 确保坐标系为 WGS84 (EPSG:4326)，与 Mapbox 一致
+# Ensure the coordinate reference system is WGS84 (EPSG:4326), matching Mapbox
 us_polygon <- st_transform(us_polygon, crs = 4326)
 
-# . 创建一个覆盖全球的多边形（世界）
+# Create a polygon covering the entire world
 coords <- matrix(c(-180, -90,
                    180, -90,
-                   180, 90,
-                   -180, 90,
+                   180,  90,
+                   -180,  90,
                    -180, -90),
                  ncol = 2, byrow = TRUE)
 world_polygon <- st_polygon(list(coords)) %>%
   st_sfc(crs = 4326) %>%
   st_sf()
 
-# . 计算差集：世界 - 美国(本土48州)
+# Compute the difference: world minus the USA (contiguous 48 states)
 mask_polygon <- st_difference(world_polygon, us_polygon)
 
-#  导出为 GeoJSON，供前端 Mapbox 加载
+# Export as GeoJSON for front-end Mapbox loading
 geojson_write(mask_polygon, file = "mask_polygon.geojson")
 
-cat("掩膜多边形已生成并保存到 mask_polygon.geojson。\n")
+cat("Mask polygon generated and saved to mask_polygon.geojson.\n")
