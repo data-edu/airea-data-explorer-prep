@@ -108,10 +108,38 @@ Shiny.addCustomMessageHandler("resizeMap", function(message) {
     legend.style.fontSize = "12px";
     legend.style.boxShadow = "0 0 3px rgba(0,0,0,0.4)";
     legend.innerHTML = '<h4>Green Job Postings</h4>' +
-      '<div><span style="background-color: #d0f3d0; width: 20px; height: 20px; display: inline-block; margin-right: 5px; border-radius: 50%;"></span>&lt; 100</div>' +
-      '<div><span style="background-color: #a1e9a1; width: 20px; height: 20px; display: inline-block; margin-right: 5px; border-radius: 50%;"></span>100 - 500</div>' +
-      '<div><span style="background-color: #99EA85; width: 20px; height: 20px; display: inline-block; margin-right: 5px; border-radius: 50%;"></span>500 - 1000</div>' +
-      '<div><span style="background-color: #66c456; width: 20px; height: 20px; display: inline-block; margin-right: 5px; border-radius: 50%;"></span>&gt; 1000</div>';
+      '<div><span style="background-color: #edf8fb; width: 20px; height: 20px; display: inline-block; margin-right: 5px; border-radius: 0%;"></span>&lt; 152</div>' +
+      '<div><span style="background-color: #b2e2e2; width: 20px; height: 20px; display: inline-block; margin-right: 5px; border-radius: 0%;"></span>152 – 489</div>' +
+      '<div><span style="background-color: #66c2a4; width: 20px; height: 20px; display: inline-block; margin-right: 5px; border-radius: 0%;"></span>489 – 1409</div>' +
+      '<div><span style="background-color: #2ca25f; width: 20px; height: 20px; display: inline-block; margin-right: 5px; border-radius: 0%;"></span>1409 – 4914</div>' +
+      '<div><span style="background-color: #006d2c; width: 20px; height: 20px; display: inline-block; margin-right: 5px; border-radius: 0%;"></span>≥ 4914</div>';
+      
+    
+    legend.innerHTML += `
+    <h4 style="margin-top:10px;">Institutions<br/>Green Completion %</h4>
+    <div>
+      <span style="
+        display:inline-block;
+        width:8px; height:8px;
+        background: rgba(178,34,34,0.5);
+        border-radius:50%;
+        margin-right:5px;
+        vertical-align:middle;"></span>
+      Low %
+    </div>
+    <div>
+      <span style="
+        display:inline-block;
+        width:14px; height:14px;
+        background: rgba(178,34,34,0.5);
+        border-radius:50%;
+        margin-right:5px;
+        vertical-align:middle;"></span>
+      High %
+    </div>
+  `;
+    
+    
     map.getContainer().appendChild(legend);
   }
 
@@ -135,10 +163,11 @@ Shiny.addCustomMessageHandler("resizeMap", function(message) {
             "fill-color": [
               "step",
               ["get", "green_job_postings"],
-              "#d0f3d0", 100,
-              "#a1e9a1", 500,
-              "#99EA85", 1000,
-              "#66c456"
+              "#edf8fb", 152,
+              "#b2e2e2", 489,
+              "#66c2a4", 1409,
+              "#2ca25f", 4914,
+              "#006d2c"
             ],
             "fill-opacity": [
               "case",
@@ -206,7 +235,7 @@ Shiny.addCustomMessageHandler("resizeMap", function(message) {
                 0, 4,
                 1, 12
               ],
-              "circle-color": "#B22222",       // Customize the color as needed
+              "circle-color": "rgba(178, 34, 34, 0.5)",       // Adjust opacity(transparency) for better visibility
               "circle-stroke-width": 1,
               "circle-stroke-color": "#FFFFFF"
             }

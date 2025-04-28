@@ -61,34 +61,8 @@ ui <- fluidPage(theme = shinytheme("cerulean"),
   # tabsetPanel specify id=“tabs” and give each tab a value
   tabsetPanel(
     id = "tabs",
-    # ----- Tab 1: Treemap -----
-    tabPanel("Treemap", value = "treemap",
-             fluidRow(
-               column(12,
-                      wellPanel(
-                        plotlyOutput("treemapPlot", height = "600px")
-                      )
-               )
-             )
-    ),
-    
-    # ----- Tab 2: Demand Page -----
-    tabPanel("Demand Page", value = "demand",
-             fluidRow(
-               column(6,
-                      wellPanel(
-                        plotlyOutput("cz_plot", height = "300px")
-                      )
-               ),
-               column(6,
-                      wellPanel(
-                        plotlyOutput("trendPlot", height = "300px")
-                      )
-               )
-             )
-    ),
-    # ----- Tab 3: Main Map -----
-    tabPanel("Main Map",    value = "mainmap",   
+    # ----- Tab 1: Main Map -----
+    tabPanel("Map",    value = "mainmap",   
              fluidRow(
                column(12,
                       wellPanel(
@@ -108,7 +82,34 @@ ui <- fluidPage(theme = shinytheme("cerulean"),
                       div(id="map", style="height:700px; width:100%;")
                )
              )
-    )
+    ),
+    # ----- Tab 2: Supply -----
+    tabPanel("Supply from Community Colleges", value = "treemap",
+             fluidRow(
+               column(12,
+                      wellPanel(
+                        plotlyOutput("treemapPlot", height = "600px")
+                      )
+               )
+             )
+    ),
+    
+    # ----- Tab 3: Demand -----
+    tabPanel("Demand from Employers", value = "demand",
+             fluidRow(
+               column(6,
+                      wellPanel(
+                        plotlyOutput("cz_plot", height = "300px")
+                      )
+               ),
+               column(6,
+                      wellPanel(
+                        plotlyOutput("trendPlot", height = "300px")
+                      )
+               )
+             )
+    ),
+
   ),
   
   
