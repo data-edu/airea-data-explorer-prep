@@ -116,28 +116,50 @@ Shiny.addCustomMessageHandler("resizeMap", function(message) {
       
     
     legend.innerHTML += `
-    <h4 style="margin-top:10px;">Institutions<br/>Green Completion %</h4>
-    <div>
-      <span style="
-        display:inline-block;
-        width:8px; height:8px;
-        background: rgba(178,34,34,0.5);
-        border-radius:50%;
-        margin-right:5px;
-        vertical-align:middle;"></span>
-      Low %
-    </div>
-    <div>
-      <span style="
-        display:inline-block;
-        width:14px; height:14px;
-        background: rgba(178,34,34,0.5);
-        border-radius:50%;
-        margin-right:5px;
-        vertical-align:middle;"></span>
-      High %
-    </div>
-  `;
+  <h4 style="margin-top:10px;">Institutions Green Completion </h4>
+  <div>
+    <span style="
+      display:inline-block;
+      width:8px; height:8px;
+      background: rgba(178,34,34,0.5);
+      border-radius:50%;
+      margin-right:5px;
+      vertical-align:middle;"></span>
+    Low
+  </div>
+  <div>
+    <span style="
+      display:inline-block;
+      width:10px; height:10px;
+      background: rgba(178,34,34,0.5);
+      border-radius:50%;
+      margin-right:5px;
+      vertical-align:middle;"></span>
+    Medium-Low
+  </div>
+  <div>
+    <span style="
+      display:inline-block;
+      width:12px; height:12px;
+      background: rgba(178,34,34,0.5);
+      border-radius:50%;
+      margin-right:5px;
+      vertical-align:middle;"></span>
+    Medium-High
+  </div>
+  <div>
+    <span style="
+      display:inline-block;
+      width:14px; height:14px;
+      background: rgba(178,34,34,0.5);
+      border-radius:50%;
+      margin-right:5px;
+      vertical-align:middle;"></span>
+    High
+  </div>
+`;
+
+
     
     
     map.getContainer().appendChild(legend);
