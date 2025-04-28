@@ -232,8 +232,8 @@ Shiny.addCustomMessageHandler("resizeMap", function(message) {
                 "interpolate",
                 ["linear"],
                 ["get", "inst_perc_green_tot"],
-                0, 4,
-                1, 12
+                0, 2,
+                1, 10
               ],
               "circle-color": "rgba(178, 34, 34, 0.5)",       // Adjust opacity(transparency) for better visibility
               "circle-stroke-width": 1,
