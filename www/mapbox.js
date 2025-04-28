@@ -19,7 +19,7 @@ document.addEventListener("DOMContentLoaded", function () {
       [-130, 5],   // Southwest corner (roughly western and southern border)
       [-60, 60]    // Northeast corner (roughly eastern and northern border)
     ],
-    projection: { name: "mercator" }
+    projection: { name: "albers" }
   });
 
   // ------------------------------
