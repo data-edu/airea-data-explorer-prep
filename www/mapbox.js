@@ -116,7 +116,7 @@ Shiny.addCustomMessageHandler("resizeMap", function(message) {
       
     
     legend.innerHTML += `
-  <h4 style="margin-top:10px;">Institutions Green Completion </h4>
+  <h4 style="margin-top:10px;">Institutions Green Degrees </h4>
   <div>
     <span style="
       display:inline-block;
@@ -125,7 +125,7 @@ Shiny.addCustomMessageHandler("resizeMap", function(message) {
       border-radius:50%;
       margin-right:5px;
       vertical-align:middle;"></span>
-    Low
+    Low < 25%
   </div>
   <div>
     <span style="
@@ -135,7 +135,7 @@ Shiny.addCustomMessageHandler("resizeMap", function(message) {
       border-radius:50%;
       margin-right:5px;
       vertical-align:middle;"></span>
-    Medium-Low
+    Medium-Low 25% - 50%
   </div>
   <div>
     <span style="
@@ -145,7 +145,7 @@ Shiny.addCustomMessageHandler("resizeMap", function(message) {
       border-radius:50%;
       margin-right:5px;
       vertical-align:middle;"></span>
-    Medium-High
+    Medium-High 50% - 75%
   </div>
   <div>
     <span style="
@@ -155,7 +155,7 @@ Shiny.addCustomMessageHandler("resizeMap", function(message) {
       border-radius:50%;
       margin-right:5px;
       vertical-align:middle;"></span>
-    High
+    High ≥ 75%
   </div>
 `;
 
@@ -184,7 +184,7 @@ Shiny.addCustomMessageHandler("resizeMap", function(message) {
           paint: {
             "fill-color": [
               "step",
-              ["get", "green_job_postings"],
+              ["get", "green_job_posting"],
               "#edf8fb", 152,
               "#b2e2e2", 489,
               "#66c2a4", 1409,
@@ -264,22 +264,29 @@ Shiny.addCustomMessageHandler("resizeMap", function(message) {
           });
           
           
+           // ------------------------------
+           // Event: Institution Layer Click
           // ------------------------------
-          // Event: Institution Layer Click
-          // ------------------------------
-          // When a user clicks a circle on the institution layer, show a popup with the institution name
-          // and its green completion percentage.
+          // When a user clicks a circle on the institution layer, show a popup with the institution name,
+          // the total number of green completions, and its green completion percentage.
           map.on("click", "institutes-layer", function(e) {
             if (e.features.length > 0) {
-              const feature = e.features[0];
-              const perc = Number(feature.properties.inst_perc_green_tot);
-              const percText = (perc * 100).toFixed(1) + "%";
-              new mapboxgl.Popup()
-                .setLngLat(e.lngLat)
-                .setHTML("<strong>" + feature.properties.instnm + "</strong><br>Green Completion: " + percText)
-                .addTo(map);
+             const feature = e.features[0];
+             const completed = Number(feature.properties.inst_green_cmplt_tot);
+             const perc    = Number(feature.properties.inst_perc_green_tot);
+             const percText = (perc * 100).toFixed(1) + "%";
+
+            new mapboxgl.Popup()
+            .setLngLat(e.lngLat)
+            .setHTML(
+              "<strong>" + feature.properties.instnm + "</strong><br>" +
+              "<strong>Green Degrees:</strong> " + completed.toLocaleString() + "<br>" +
+              "<strong>Green Degree Rate:</strong> " + percText
+              )
+            .addTo(map);
             }
           });
+
           // ------------------------------
           // Event: Change Cursor on Hover for Institution Layer
           // ------------------------------
@@ -363,7 +370,13 @@ Shiny.addCustomMessageHandler("resizeMap", function(message) {
       const properties = e.features[0].properties;
       hoverPopup
         .setLngLat(e.lngLat)
-        .setHTML("<strong>CZ:</strong> " + properties.CZ20 + "<br><strong>Green Job Postings:</strong> " + properties.green_job_postings)
+        .setHTML(
+    "<strong>Commuting Zone ID:</strong> " + properties.CZ20 +
+    "<br><strong>Year:</strong> " + properties.YEAR +
+    "<br><strong>Green Job Postings:</strong> " + Number(properties.green_job_posting).toLocaleString() +
+    "<br><strong>Percentage of Green Postings:</strong> " + parseFloat(properties.pct_green).toFixed(1) + "%" +
+    "<br><strong>Green Jobs per 1,000 Residents:</strong> " + parseFloat(properties.per1000).toFixed(2)
+  )
         .addTo(map);
     }
   });

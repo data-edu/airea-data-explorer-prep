@@ -30,8 +30,8 @@ ccrc_cip_comp <- readRDS("ccrc_cip_comp.rds")
 # - geometry: Spatial information for mapping
 CZ_job_post <- readRDS("CZ_job_post.rds")
 # Ensure each commuting zone feature gets a unique ID (for Mapbox feature-state management like hover events)
-CZ_job_post <- CZ_job_post %>% 
-  mutate(id = row_number())
+#CZ_job_post <- CZ_job_post %>% 
+ # mutate(id = row_number())
 
 
 # ============================================================
@@ -199,9 +199,13 @@ server <- function(input, output, session) {
       # Construct HTML content for the popup including institution name, year, and formatted green completion percentage.
       popup_text <- paste0(
         "<strong>", search_result$instnm, "</strong><br>",
-        "Year: ", search_result$year, "<br>",
-        "Total Community College Green Completion Percentage: ", sprintf("%.1f%%", search_result$inst_perc_green_tot * 100)
+        "<strong>Year:</strong> ", search_result$year, "<br>",
+        "<strong>Green Degrees:</strong> ",
+        format(search_result$inst_green_cmplt_tot, big.mark = ",", scientific = FALSE), "<br>",
+        "<strong>Green Degree Rate:</strong> ",
+        sprintf("%.1f%%", search_result$inst_perc_green_tot * 100)
       )
+      
       # Create a list with longitude, latitude, and the popup HTML content.
       coords <- list(
         lng = search_result$longitud,
