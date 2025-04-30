@@ -116,7 +116,7 @@ Shiny.addCustomMessageHandler("resizeMap", function(message) {
       
     
     legend.innerHTML += `
-  <h4 style="margin-top:10px;">Institutions Green Degrees </h4>
+  <h4 style="margin-top:10px;">Green Degrees Rate </h4>
   <div>
     <span style="
       display:inline-block;
