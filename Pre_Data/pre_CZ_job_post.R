@@ -112,4 +112,8 @@ cz_sf1 <- cz_sf %>%
 library(readr)
 write_rds(cz_sf1, "CZ_job_post.rds")
 
+# 7 compress the CZ_job_post.rds to CZ_job_post.rds.zip
+library(zip)
+zip("CZ_job_post.rds.zip", "CZ_job_post.rds")
+
 

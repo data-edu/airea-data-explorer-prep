@@ -1,0 +1,13 @@
+name: CCRC_GreenSeek
+title: CCRC_GreenSeek
+username: ed-analytics
+account: ed-analytics
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 14150233
+bundleId: 10158784
+url: https://ed-analytics.shinyapps.io/CCRC_GreenSeek/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: .quartoignore|.RData|ccrc_cip_comp.dta|ccrc_cip_comp_1.dta|county20/county20.dbf|county20/county20.prj|county20/county20.shp|county20/county20.shx|cz_postings-2025-03-02.csv|cz20/cz20.dbf|cz20/cz20.prj|cz20/cz20.shp|cz20/cz20.shx|institutes.json|pre_CZ_job_post.R|Pre_Plotly.R|pre_supply data.R|Pre_treemap.R|soccipxwalk.dta|Three_Tab_App .R
