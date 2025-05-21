@@ -85,10 +85,29 @@ ui <- fluidPage(
         selectInput("selected_year_supply", "Select Year:",
                     choices = sort(unique(CZ_job_post$YEAR), decreasing = TRUE),
                     selected = max(CZ_job_post$YEAR))
-      )
+      ),
       
-      # No controls needed on the Demand tab
-    ),
+      # controls shown only on demand tab
+      
+      conditionalPanel(
+        "input.tabs == 'demand'",
+        checkboxGroupInput(
+          "selected_SOCs", 
+          "Select SOC:",
+          choices = c(
+            "11-1011" = "Management",
+            "13-1199" = "Business and Financial Operations",
+            "15-1212" = "Information Security Analysts",
+            "17-2199" = "Engineers",
+            "19-2041" = "Environmental Scientists and Specialists",
+            "19-4099" = "Life, Physical, and Social Science Technicians",
+            "27-1024" = "Graphic Designers",
+            "27-3031" = "Public Relations Specialists"
+          ),
+          
+        )
+      )
+    ),  # ← here we close sidebarPanel() and then put a comma
     
     mainPanel(
       width = 9,
@@ -105,11 +124,8 @@ ui <- fluidPage(
         
         tabPanel("Demand from Employers", value = "demand",
                  
+                 plotlyOutput("trendPlot")
                  
-                 fluidRow(
-                   column(6, plotlyOutput("cz_plot", height="300px")),
-                   column(6, plotlyOutput("trendPlot", height="300px"))
-                 )
         )
       )
     )
@@ -216,11 +232,36 @@ server <- function(input, output, session) {
   
   # --- 3. Demand tab ---
   output$trendPlot <- renderPlotly({
-    readRDS("p_SOC_plotly.rds")
-  })
-  
-  output$cz_plot <- renderPlotly({
-    readRDS("p_CZ_plotly.rds")
+    
+    d_SOC <- readRDS("d_SOC.rds")
+    
+    p_SOC <- d_SOC %>% 
+      ggplot(aes(
+        x      = YEAR,
+        y      = TOTAL_POSTS,
+        group  = Occupation,
+        colour = Occupation,
+        text   = paste0(
+          "Year: ", YEAR, "<br>",
+          "Total Posts: ", scales::comma(TOTAL_POSTS), "<br>",
+          "Occupation: ", Occupation
+        )
+      )) +
+      geom_line() +
+      scale_x_continuous(breaks = 2010:2024) +
+      scale_y_continuous(labels = scales::comma) +
+      scale_color_brewer(palette = "Set1") +
+      theme_minimal() +
+      theme(legend.position = "bottom") +
+      labs(
+        title   = "Green Jobs Postings By SOC Code",
+        caption = "Source: Lightcast postings data",
+        x       = NULL,
+        y       = NULL
+      ) +
+      theme(legend.position = "none")
+    
+    plotly::ggplotly(p_SOC, tooltip = "text")
   })
   
   # --- 4. Force map resize when switching to Map tab ---
@@ -247,25 +288,6 @@ server <- function(input, output, session) {
     treemap_list[[as.character(input$selected_year_supply)]]
   })
   
-  
-  # -------------------------------
-  # Render Trend Plot and Commuting Zone (CZ) Plot
-  # -------------------------------
-  # These plots are pre-generated Plotly objects stored in RDS files and are rendered in their respective output panels.
-  output$trendPlot <- renderPlotly({
-    readRDS("p_SOC_plotly.rds")
-  })
-  
-  # JR added just as a placeholder until we get the data from Matias/Cameron
-  # output$table <- renderTable( {
-  #   
-  #   read_rds("my-table.rds")
-  #   
-  # })
-  
-  output$cz_plot <- renderPlotly({
-    readRDS("p_CZ_plotly.rds")
-  })
 }
 
 # ============================================================
