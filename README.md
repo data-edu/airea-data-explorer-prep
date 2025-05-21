@@ -58,7 +58,7 @@ interactive charts
 
 3.  **Set up Mapbox token**:
 
-    - Create a file named `mapboxtoken_setup.R` in the project root
+    - Edit the file file named `mapboxtoken_setup.R` in the project root
       containing:
 
       ``` r
