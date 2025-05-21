@@ -53,8 +53,8 @@ ui <- fluidPage(
     "))
   ),
   
-  titlePanel("CCRC Green Seek"),
-  
+  titlePanel("Advanced Energy and Resilient Infrastructure (AERI) Jobs Postings and Community College Graduates"),
+  tags$p("This interactive map shows how community college green program completions align with green-sector job postings by commuting zone. Use the controls above to change year, color metric, or locate a specific institution."),
   sidebarLayout(
     sidebarPanel(
       width = 3,
@@ -67,20 +67,15 @@ ui <- fluidPage(
                     selected = max(CZ_job_post$YEAR)),
         selectInput("cz_metric", "Color by:", 
                     choices = c(
-                      "Total green job postings"      = "green_job_posting",
-                      "Pct. of postings that are green" = "pct_green",
-                      "Green jobs per 1,000 residents" = "per1000"
+                      "AERI Job Postings"      = "green_job_posting",
+                      "% AERI Postings" = "pct_green",
+                      "AERI Jobs / 1,000 Residents" = "per1000"
                     )),
         selectizeInput("search_term", "Search by Institution:",
                        choices = NULL, options = list(), width="100%"),
         fluidRow(
           column(6, actionButton("search_btn","Search", class="btn-primary", width="100%")),
           column(6, tags$button("Clear", onclick="clearMap()", class="btn btn-default", style="width:100%;"))
-        ),
-        wellPanel(id="desc-box",
-                  "This interactive map shows how community college green program completions align with green-sector job postings by commuting zone. ",
-                  tags$br(),
-                  "Use the controls above to change year, color metric, or locate a specific institution."
         )
       ),
       
@@ -109,6 +104,8 @@ ui <- fluidPage(
         ),
         
         tabPanel("Demand from Employers", value = "demand",
+                 
+                 
                  fluidRow(
                    column(6, plotlyOutput("cz_plot", height="300px")),
                    column(6, plotlyOutput("trendPlot", height="300px"))
@@ -125,7 +122,7 @@ ui <- fluidPage(
     column(12, align = "center",
            tags$footer(
              style = "margin-top: 20px; padding: 10px; font-size: 12px; background-color: #f8f9fa; border-top: 1px solid #e9ecef;",
-             HTML("Created by Wei Wang, Joshua Rosenberg, Cameron Sublet and Bret Staudt Willet with the Community College Research Center at Teachers College, Columbia.<br>Source code at: <a href='https://github.com/data-edu/CCRC_GreenSeek-Mapping' target='_blank'>GitHub</a>.<br>Thanks to funding from JC Morgan Chase.")
+             HTML("Created by Wei Wang, Joshua Rosenberg, Cameron Sublet and Bret Staudt Willet with the <a href='https://ccrc.tc.columbia.edu/' target='_blank'>Community College Research Center at Teachers College, Columbia University</a>. Source code at: <a href='https://github.com/data-edu/CCRC_GreenSeek-Mapping' target='_blank'>GitHub</a>. Thanks to JPMorgan Chase for supporting this w.")
            )
     )
   ),
