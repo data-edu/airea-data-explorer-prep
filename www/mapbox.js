@@ -56,7 +56,7 @@ document.addEventListener("DOMContentLoaded", function () {
     map.setPaintProperty("cz-layer", "fill-color", buildFillColorExpr(metric));
     map.setPaintProperty("cz-layer", "fill-opacity", [
       "case", ["boolean", ["feature-state","hover"], false],
-      1, .8
+      1, .7
     ]);
     map.setPaintProperty("cz-layer", "fill-outline-color", "#000000");
 
@@ -161,7 +161,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
     map.addLayer({
       id: "mask-layer", type: "fill", source: "mask",
-      paint: { "fill-color": "#ffffff", "fill-opacity": .1 }
+      paint: { "fill-color": "#ffffff", "fill-opacity": 1 }
     });
     // Ensure layer order
     map.on("idle", function () {
