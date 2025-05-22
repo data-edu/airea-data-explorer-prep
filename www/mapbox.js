@@ -56,7 +56,7 @@ document.addEventListener("DOMContentLoaded", function () {
     map.setPaintProperty("cz-layer", "fill-color", buildFillColorExpr(metric));
     map.setPaintProperty("cz-layer", "fill-opacity", [
       "case", ["boolean", ["feature-state","hover"], false],
-      1, 0.7
+      1, .8
     ]);
     map.setPaintProperty("cz-layer", "fill-outline-color", "#000000");
 
@@ -161,7 +161,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
     map.addLayer({
       id: "mask-layer", type: "fill", source: "mask",
-      paint: { "fill-color": "#ffffff", "fill-opacity": 1 }
+      paint: { "fill-color": "#ffffff", "fill-opacity": .1 }
     });
     // Ensure layer order
     map.on("idle", function () {
@@ -200,25 +200,29 @@ document.addEventListener("DOMContentLoaded", function () {
   // ──────────────────────────────────────────────────────────────────────────
   // 6) CZ Data Loading & Layer Update
   // ──────────────────────────────────────────────────────────────────────────
-  function loadCZDataForYear(year) {
-    const url = `CZData_${year}.json`;
-    fetch(url, { cache: "force-cache" })
-      .then(r => r.json())
-      .then(data => {
-        if (!map.getSource("cz")) {
-          map.addSource("cz", { type: "geojson", data });
-        } else {
-          map.getSource("cz").setData(data);
-        }
-        if (!map.getLayer("cz-layer")) {
-          map.addLayer({ id: "cz-layer", type: "fill", source: "cz" });
-          map.on("mousemove", "cz-layer", onCZMouseMove);
-          map.on("mouseleave","cz-layer", onCZMouseLeave);
-        }
-        applyCZPaint(currentCZMetric);
-      })
-      .catch(err => console.error("Error loading " + url, err));
-  }
+function loadCZDataForYear(year) {
+  const url = `CZData_${year}.json`;
+  fetch(url, { cache: "force-cache" })
+    .then(r => r.json())
+    .then(data => {
+      if (!map.getSource("cz")) {
+        map.addSource("cz", {
+          type:       "geojson",
+          data:       data,
+          generateId: true
+        });
+        
+        map.addLayer({ id: "cz-layer", type: "fill", source: "cz"  });
+        map.on("mousemove", "cz-layer", onCZMouseMove);
+        map.on("mouseleave","cz-layer", onCZMouseLeave);
+      } else {
+        map.getSource("cz").setData(data);
+      }
+      applyCZPaint(currentCZMetric);
+    })
+    .catch(err => console.error("Error loading " + url, err));
+}
+
   function onCZMouseMove(e) {
     if (!e.features.length) return;
     if (hoveredFeatureId !== null) {
