@@ -28,10 +28,28 @@ world_polygon <- st_polygon(list(coords)) %>%
   st_sfc(crs = 4326) %>%
   st_sf()
 
-# Compute the difference: world minus the USA (contiguous 48 states)
+
+# 1. turn off s2
+sf::sf_use_s2(FALSE)
+# 2.Compute the difference: world minus the USA 
 mask_polygon <- st_difference(world_polygon, us_polygon)
+# 3.. reopen s2
+sf::sf_use_s2(TRUE)
 
-# Export as GeoJSON for front-end Mapbox loading
-geojson_write(mask_polygon, file = "mask_polygon.geojson")
+mask_sf <- st_sf(geometry = mask_polygon)
 
-cat("Mask polygon generated and saved to mask_polygon.geojson.\n")
+# write to under www folder
+st_write(
+  mask_sf,
+  "www/mask_polygon.geojson",
+  driver = "GeoJSON",
+  delete_dsn = TRUE
+)
+
+
+
+
+
+
+
+
