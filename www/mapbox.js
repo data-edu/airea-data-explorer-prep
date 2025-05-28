@@ -230,82 +230,83 @@ function loadCZDataForYear(year) {
     }
     hoveredFeatureId = e.features[0].id;
     map.setFeatureState({ source: "cz", id: hoveredFeatureId }, { hover: true });
-    const p = e.features[0].properties;
-    hoverPopup
-      .setLngLat(e.lngLat)
-      .setHTML(
-        `<strong>CZ:</strong> ${p.CZ20}<br>
-         <strong>Year:</strong> ${p.YEAR}<br>
-         <strong>Postings:</strong> ${(+p.green_job_posting).toLocaleString()}<br>
-         <strong>% Green:</strong> ${(+p.pct_green).toFixed(1)}%<br>
-         <strong>Per 1k:</strong> ${(+p.per1000).toFixed(2)}`
-      )
-      .addTo(map);
   }
   function onCZMouseLeave() {
     if (hoveredFeatureId !== null) {
       map.setFeatureState({ source: "cz", id: hoveredFeatureId }, { hover: false });
       hoveredFeatureId = null;
     }
-    hoverPopup.remove();
+   
   }
 
   // ──────────────────────────────────────────────────────────────────────────
   // 7) Institute Data Loading
   // ──────────────────────────────────────────────────────────────────────────
-  function loadInstituteDataForYear(year) {
-    const url = `InstituteData_${year}.json`;
-    fetch(url, { cache: "force-cache" })
-      .then(r => r.json())
-      .then(data => {
-        if (!map.getSource("institutes")) {
-          // First time adding source
-          map.addSource("institutes", { type: "geojson", data });
+// global hover popup for institutes
+let instHoverPopup = new mapboxgl.Popup({
+  closeButton: false,
+  closeOnClick: false
+});
 
-          // First time adding layer
-          map.addLayer({
-            id: "institutes-layer",
-            type: "circle",
-            source: "institutes",
-            paint: {
-                "circle-radius": ["interpolate", ["linear"], ["get","inst_perc_green_tot"], 0,2,1,10],
-                "circle-color":  "rgba(178,34,34,0.5)",
-                "circle-stroke-width": 1,
-                "circle-stroke-color": "#ffffff"
-              }
-          });
+function loadInstituteDataForYear(year) {
+  const url = `InstituteData_${year}.json`;
+  fetch(url, { cache: "force-cache" })
+    .then(r => r.json())
+    .then(data => {
+      if (!map.getSource("institutes")) {
+        map.addSource("institutes", { type: "geojson", data });
 
-          // Click popup
-          map.on("click", "institutes-layer", function(e) {
-            if (!e.features.length) return;
-            const f = e.features[0].properties;
-            new mapboxgl.Popup()
-              .setLngLat(e.lngLat)
-              .setHTML(
-                `<strong>${f.instnm}</strong><br>
-                 Green Degrees: ${(+f.inst_green_cmplt_tot).toLocaleString()}<br>
-                 Rate: ${(f.inst_perc_green_tot*100).toFixed(1)}%`
-              )
-              .addTo(map);
-          });
+        map.addLayer({
+          id: "institutes-layer",
+          type: "circle",
+          source: "institutes",
+          paint: {
+            "circle-radius": [
+              "interpolate", ["linear"],
+              ["get", "inst_perc_green_tot"],
+              0, 2,
+              1, 10
+            ],
+            "circle-color":       "rgba(178,34,34,0.5)",
+            "circle-stroke-width": 1,
+            "circle-stroke-color": "#ffffff"
+          }
+        });
 
-          // Cursor pointer on hover
-          map.on("mouseenter", "institutes-layer", function() {
-            map.getCanvas().style.cursor = "pointer";
-          });
-          map.on("mouseleave", "institutes-layer", function() {
-            map.getCanvas().style.cursor = "";
-          });
-        } else {
-          // If source already exists, only update data
-          map.getSource("institutes").setData(data);
-        }
+        // --- Hover for institutes-layer ---
+        map.on("mouseenter", "institutes-layer", function(e) {
+          map.getCanvas().style.cursor = "pointer";
+          if (!e.features.length) return;
 
-        // After each load or update of institute data, refresh the legend
-        addInstituteLegend();
-      })
-      .catch(err => console.error("Error loading " + url, err));
-  }
+          const props = e.features[0].properties;
+          const coords = e.lngLat;
+
+          const html = `
+            <strong>${props.instnm}</strong><br>
+            Green Degrees: ${(+props.inst_green_cmplt_tot).toLocaleString()}<br>
+            Rate: ${(props.inst_perc_green_tot*100).toFixed(1)}%
+          `;
+
+          instHoverPopup
+            .setLngLat(coords)
+            .setHTML(html)
+            .addTo(map);
+        });
+
+        map.on("mouseleave", "institutes-layer", function() {
+          map.getCanvas().style.cursor = "";
+          instHoverPopup.remove();
+        });
+
+      } else {
+        map.getSource("institutes").setData(data);
+      }
+
+      // refresh the institute legend
+      addInstituteLegend();
+    })
+    .catch(err => console.error("Error loading " + url, err));
+}
 
   // ──────────────────────────────────────────────────────────────────────────
   // 8) Clear Map (Search)
