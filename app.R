@@ -17,7 +17,7 @@ source("mapboxtoken_setup.R")  # Loads mapbox_token used for Mapbox access
 # Load Supply Data (for Institution Search)
 # ============================================================
 # Read supply data from an RDS file; this data is used for filtering/searching institutions.
-ccrc_cip_comp <- readRDS("ccrc_cip_comp.rds")
+ccrc_cip_comp <- readRDS("ccrc_cip_comp_cz.rds") # JR added _cz
 
 
 # ============================================================
