@@ -19,7 +19,6 @@ source("mapboxtoken_setup.R")  # Loads mapbox_token used for Mapbox access
 # Read supply data from an RDS file; this data is used for filtering/searching institutions.
 ccrc_cip_comp <- readRDS("ccrc_cip_comp_cz.rds") # JR added _cz
 
-
 # ============================================================
 # Load Demand Data: Commuting Zone Job Postings
 # ============================================================
@@ -119,7 +118,33 @@ ui <- fluidPage(
         ),
         
         tabPanel("Supply from Community Colleges", value = "treemap",
-                 plotlyOutput("treemapPlot", height="600px")
+                 # AERI Definition (as per screenshot)
+                 tags$p(strong("AERI"), " = Advanced Energy and Resilient Infrastructure", 
+                        style="margin-top: 15px; margin-bottom: 15px;"),
+                 
+                 # Top Row: Table Output
+                 fluidRow(
+                   column(12,
+                          # The screenshot shows "Institution" as a key part of this section.
+                          # You can add a specific title for the table if needed, e.g., tags$h4("Institution Data").
+                          DT::dataTableOutput("supply_table") 
+                   )
+                 ),
+                 
+                 tags$hr(), # Visual separator
+                 
+                 # Bottom Row: Treemap (left) and Bar chart (right)
+                 fluidRow(
+                   column(7, # Adjust width as needed (e.g., 6 for equal split)
+                          tags$h5("Tree map showing frequent Degrees (CIPs)"), # Title for the treemap
+                          plotlyOutput("treemapPlot", height = "600px") # Your existing treemap plot
+                   ),
+                   
+                   column(5, # Adjust width as needed
+                          tags$h5("Degrees (Lines represent individual CIP codes)"), # Title for the bar chart
+                          plotOutput("degrees_over_time") # Placeholder for your bar chart output
+                   )
+                 )
         ),
         
         tabPanel("Demand from Employers", value = "demand",
@@ -286,6 +311,38 @@ server <- function(input, output, session) {
     req(input$selected_year_supply)  # Ensure the selected year is available
     # Extract the treemap plot corresponding to the selected year.
     treemap_list[[as.character(input$selected_year_supply)]]
+  })
+  
+  # render table
+  
+  output$supply_table <- renderDataTable( {
+    
+    ccrc_cip_comp %>% 
+      filter(year == input$selected_year_supply) %>% 
+      select(Year = year, Name = instnm, `Commuting Zone` = CZ_label, completions = inst_cmplt_o) 
+      # Wei, I need help here - how to select the variable(s) of note here - completions, %, and per 1000
+    
+  })
+  
+  # create graph of degrees
+  output$degrees_over_time <- renderPlot({
+    yearly_totals <- ccrc_cip_comp %>%
+      group_by(year) %>%
+      summarize(total_completions = sum(inst_cmplt_o), .groups = "drop")
+    
+    ggplot(yearly_totals, aes(x = year, y = total_completions)) +
+      geom_line(color = "grey70") +
+      geom_point(
+        data = dplyr::filter(yearly_totals, year == input$selected_year_supply),
+        aes(x = year, y = total_completions),
+        color = "red",
+        size = 3
+      ) +
+      theme_bw() +
+      ylab("Total Completions") +
+      xlab("Year") +
+      scale_y_continuous(labels = scales::comma)
+    
   })
   
 }
