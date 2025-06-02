@@ -151,7 +151,7 @@ ui <- fluidPage(
                  # Bottom Row: Treemap (left) and Bar chart (right)
                  fluidRow(
                    column(12), # Adjust width as needed (e.g., 6 for equal split)
-                   tags$h5("Tree map showing SOC codes for most common jobs"), # Title for the treemap
+                   tags$h5("SOC codes for most common jobs"), # Title for the treemap
                    plotlyOutput("trendPlot", height = "600px") # Your existing treemap plot
                  ),
         ),
