@@ -1,7 +1,8 @@
-mapbox_token <- ""
+mapbox_token <- Sys.getenv("MAPBOX_ACCESS_TOKEN", unset = "")
 
-if (mapbox_token == "YOUR_MAPBOX_ACCESS_TOKEN") {
-  message("PLEASE NOTE - You need to set up your mapbox token, see the README")
-} else {
-  message("mapbox token set")
+if (mapbox_token == "") {
+  stop(
+    "MAPBOX_ACCESS_TOKEN is not set. ",
+    "Add it to ~/.Renviron using usethis::edit_r_environ() and add MAPBOX_ACCESS_TOKEN=YOUR TOKEN"
+  )
 }

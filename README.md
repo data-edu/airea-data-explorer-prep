@@ -58,15 +58,10 @@ interactive charts
 
 3.  **Set up Mapbox token**:
 
-    - Edit the file file named `mapboxtoken_setup.R` in the project root
-      containing:
-
-      ``` r
-      mapbox_token <- "YOUR_MAPBOX_ACCESS_TOKEN"
-      ```
-
-    - Replace `"YOUR_MAPBOX_ACCESS_TOKEN"` with your actual Mapbox
-      token.
+    - Add to your .Renviron the following:
+      `MAPBOX_ACCESS_TOKEN=YOUR ACCESS TOKEN`
+      
+      Where YOUR ACCESS TOKEN is copied from https://console.mapbox.com/
       
 4. **Download Private Data**
     

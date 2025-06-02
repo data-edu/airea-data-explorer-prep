@@ -1,0 +1,12 @@
+name: AERI
+title: AERI
+username: ed-analytics
+account: ed-analytics
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 14801199
+bundleId: 10379950
+url: https://ed-analytics.shinyapps.io/AERI/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
