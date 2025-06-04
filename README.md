@@ -3,10 +3,9 @@ README
 Wei Wang
 2025-04-22
 
-# CCRC Green Job Seek Mapping
+# AIREA Data Explorer
 
-A Shiny web application for interactive mapping of green job postings
-across U.S. Commuting Zones (CZs).
+A Shiny web application for interactive mapping of Advanced Infrastructure, Energy, and Agriculture (AIREA) job postings across U.S. Commuting Zones (CZs).
 
 ## Table of Contents
 
