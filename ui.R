@@ -37,7 +37,7 @@ ui <- fluidPage(
     "))
   ),
   
-  titlePanel("Advanced Energy and Resilient Infrastructure (AERI) Jobs Postings and Community College Graduates"),
+  titlePanel("Advanced Infrastructure, Energy, and Agriculture (AIREA) Jobs Postings and Community College Graduates"),
   tags$p("This interactive map shows how community college green program completions align with green-sector job postings by commuting zone. Use the controls above to change year, color metric, or locate a specific institution."),
   sidebarLayout(
     sidebarPanel(
@@ -51,9 +51,9 @@ ui <- fluidPage(
                     selected = max(CZ_job_post$YEAR)),
         selectInput("cz_metric", "Color by:", 
                     choices = c(
-                      "AERI Job Postings"      = "green_job_posting",
-                      "% AERI Postings" = "pct_green",
-                      "AERI Jobs / 1,000 Residents" = "per1000"
+                      "AIREA Job Postings"      = "green_job_posting",
+                      "% AIREA Postings" = "pct_green",
+                      "AIREA Jobs / 1,000 Residents" = "per1000"
                     )),
         selectizeInput("search_term", "Search by Institution:",
                        choices = NULL, options = list(), width="100%"),
@@ -106,7 +106,7 @@ ui <- fluidPage(
                  div(id="map", style="height:700px;width:100%;")
         ),
         
-        tabPanel("Community Colleges AERI Degree Completions", value = "treemap",
+        tabPanel("Community Colleges AIREA Degree Completions", value = "treemap",
                  
                  # Top Row: Table Output
                  fluidRow(
@@ -133,7 +133,7 @@ ui <- fluidPage(
                  )
         ),
         
-        tabPanel("AERI-related Job Postings", value = "demand",
+        tabPanel("AIREA-related Job Postings", value = "demand",
 
                  # Top Row: Table Output
                  tags$h5("Job Postings per SOC code"), # Title for the treemap
