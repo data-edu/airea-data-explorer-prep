@@ -52,14 +52,14 @@ cz20<- st_read("cz20/cz20.shp")
 
 #### 0302 Josh data
 library(readr)
-cz_0302 <- read_csv("cz_postings-2025-03-02.csv")
+cz_0302 <- read_csv("cz-postings-by-year-2025-06-05.csv")
 
 
 # 1. CZ-level population ---------------------------------------------------
 cz_pop <- county_pop_ts %>%
   # Join with county-to-commuting-zone lookup to get CZ20 for each county
   inner_join(
-    county20a %>% select(GEOID, CZ20),
+    county20a %>% select(GEOID, CZ20), # I am not seeing county20a
     by = "GEOID"
   ) %>%
   # Sum county population estimates by CZ and year
