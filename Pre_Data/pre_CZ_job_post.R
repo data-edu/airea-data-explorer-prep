@@ -59,7 +59,7 @@ cz_0302 <- read_csv("cz-postings-by-year-2025-06-05.csv")
 cz_pop <- county_pop_ts %>%
   # Join with county-to-commuting-zone lookup to get CZ20 for each county
   inner_join(
-    county20a %>% select(GEOID, CZ20), # I am not seeing county20a
+    county20a %>% select(GEOID, CZ20), # JR: I am not seeing county20a
     by = "GEOID"
   ) %>%
   # Sum county population estimates by CZ and year
