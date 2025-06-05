@@ -1,7 +1,12 @@
 
 ##### supply data preparation using data from Matias
 library(haven)
-ccrc_cip_comp <- read_dta("ccrc_cip_comp.dta")
+library(tidyverse)
+
+# JR edit for new data
+# ccrc_cip_comp <- read_dta("ccrc_cip_comp.dta")
+
+ccrc_cip_comp <- read_rds("ccrc_cip_comp_cz.rds")
 
 colnames(ccrc_cip_comp)
 
