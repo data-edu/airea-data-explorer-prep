@@ -60,10 +60,11 @@ server <- function(input, output, session) {
     if (nrow(search_result) > 0) {
       popup_text <- paste0(
         "<strong>", search_result$instnm, "</strong><br>",
+        "<strong>", search_result$CZ_label, "</strong><br>",
         "<strong>Year:</strong> ", search_result$year, "<br>",
-        "<strong>Green Degrees:</strong> ",
+        "<strong>AIREA Degrees:</strong> ",
         format(search_result$inst_green_cmplt_tot, big.mark = ",", scientific = FALSE), "<br>",
-        "<strong>Green Degree Rate:</strong> ",
+        "<strong>AIREA Degree Rate:</strong> ",
         sprintf("%.1f%%", search_result$inst_perc_green_tot * 100)
       )
       coords <- list(
