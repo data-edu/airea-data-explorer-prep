@@ -1,9 +1,6 @@
 # -------------------------------
 # Commuting Zone level data pre
 # -------------------------------
-
-
-
 # ------------------------------------------------------------------------
 # county population estimate data from tidycensus across year 2010 to 2023
 # ------------------------------------------------------------------------
@@ -50,16 +47,16 @@ cz20<- st_read("cz20/cz20.shp")
 # CZ_Job Posting Data version 2025-03-02
 # -------------------------------
 
-#### 0302 Josh data
+#### 0605 Josh data
 library(readr)
-cz_0302 <- read_csv("cz-postings-by-year-2025-06-05.csv")
+cz_0605 <- read_csv("cz-postings-by-year-2025-06-05-01.csv")
 
 
 # 1. CZ-level population ---------------------------------------------------
 cz_pop <- county_pop_ts %>%
   # Join with county-to-commuting-zone lookup to get CZ20 for each county
   inner_join(
-    county20a %>% select(GEOID, CZ20), # JR: I am not seeing county20a
+    county20 %>% select(GEOID, CZ20),
     by = "GEOID"
   ) %>%
   # Sum county population estimates by CZ and year
@@ -70,12 +67,12 @@ cz_pop <- county_pop_ts %>%
   )
 
 # 2. CZ-level job postings ------------------------------------------------
-cz_postings <- cz_0302 %>%
+cz_postings <- cz_0605 %>%
   # Aggregate total and green job postings by CZ and year
-  group_by(cz, year) %>%
+  group_by(CZ, YEAR) %>%
   summarise(
-    total_postings    = sum(num_postings, na.rm = TRUE),
-    green_job_posting = sum(num_postings[is_green_soc == 1], na.rm = TRUE),
+    total_postings    = sum(TOTAL_JOB_POSTS, na.rm = TRUE),
+    airea_job_posting = sum(TOTAL_JOB_POSTS[airea == 1], na.rm = TRUE),
     .groups = "drop"
   )
 
@@ -84,21 +81,21 @@ cz_data <- cz_postings %>%
   # Join population data to postings data
   left_join(
     cz_pop,
-    by = c("cz" = "CZ20", "year" = "year")
+    by = c("CZ" = "CZ20", "YEAR" = "year")
   ) %>%
   # Calculate percent green and green postings per 1,000 people
   mutate(
-    pct_green = green_job_posting / total_postings * 100,
-    per1000   = green_job_posting / (pop / 1000)
+    pct_green = airea_job_posting / total_postings * 100,
+    per1000   = airea_job_posting / (pop / 1000)
   )
 
 # 4. Reattach CZ boundary geometries and prepare sf object -----------------
 cz_sf <- cz20 %>%
   # Merge spatial CZ boundaries with the computed CZ data
-  left_join(cz_data, by = c("CZ20" = "cz")) %>%
-  # Rename for consistency and drop any future year (2024)
-  rename(YEAR = year) %>%
-  filter(YEAR != 2024)
+  left_join(cz_data, by = c("CZ20" = "CZ")) %>%
+  # drop any future year2024,2025
+  filter(YEAR != 2024 )%>%
+  filter(YEAR != 2025) 
 
 # 5. Convert to sf object --------------------------------------------------
 cz_sf1 <- cz_sf %>%
