@@ -38,7 +38,7 @@ ui <- fluidPage(
   ),
   
   titlePanel("Advanced Infrastructure, Energy, and Agriculture (AIREA) Jobs Postings and Community College Graduates"),
-  tags$p("This interactive map shows how community college green program completions align with green-sector job postings by commuting zone. Use the controls above to change year, color metric, or locate a specific institution."),
+  tags$p("This interactive map shows how community college green program completions align with AIREA-sector job postings by commuting zone. Use the controls above to change year, color metric, or locate a specific institution."),
   sidebarLayout(
     sidebarPanel(
       width = 3,
@@ -51,7 +51,7 @@ ui <- fluidPage(
                     selected = max(CZ_job_post$YEAR)),
         selectInput("cz_metric", "Color by:", 
                     choices = c(
-                      "AIREA Job Postings"      = "green_job_posting",
+                      "AIREA Job Postings"      = "airea_job_posting",
                       "% AIREA Postings" = "pct_green",
                       "AIREA Jobs / 1,000 Residents" = "per1000"
                     )),
