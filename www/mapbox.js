@@ -283,7 +283,8 @@ function loadInstituteDataForYear(year) {
 
           const html = `
             <strong>${props.instnm}</strong><br>
-            Green Degrees: ${(+props.inst_green_cmplt_tot).toLocaleString()}<br>
+            CZ: ${(+props.CZ_label).toLocaleString()}<br>
+            AIREA Degrees: ${(+props.inst_green_cmplt_tot).toLocaleString()}<br>
             Rate: ${(props.inst_perc_green_tot*100).toFixed(1)}%
           `;
 
