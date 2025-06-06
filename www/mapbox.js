@@ -27,22 +27,22 @@ document.addEventListener("DOMContentLoaded", function () {
   // 2) "Color by" Helpers: Thresholds, Palettes, Labels
   // ──────────────────────────────────────────────────────────────────────────
   const czBreaks = {
-    green_job_posting: [152, 489, 1409, 4914],
+    airea_job_posting: [99, 499, 999, 4999],
     pct_green:          [1,   5,    10,   20],
     per1000:            [2,   5,    10,   20]
   };
   const czColors = {
-    green_job_posting: ["#edf8fb","#b2e2e2","#66c2a4","#2ca25f","#006d2c"],
+    airea_job_posting: ["#edf8fb","#b2e2e2","#66c2a4","#2ca25f","#006d2c"],
     pct_green:          ["#f7fcf5","#c7e9c0","#74c476","#238b45","#00441b"],
     per1000:            ["#fff5eb","#fdd0a2","#f16913","#d94801","#8c2d04"]
   };
   const czLabels = {
-    green_job_posting: "Green Job Postings",
+    airea_job_posting: "AIREA Job Postings",
     pct_green:          "Percentage Green",
     per1000:            "Jobs per 1,000"
   };
-  // Currently selected metric (defaults to "green_job_posting")
-  let currentCZMetric = "green_job_posting";
+  // Currently selected metric (defaults to "airea_job_posting")
+  let currentCZMetric = "airea_job_posting";
 
   function buildFillColorExpr(metric) {
     const expr = ["step", ["get", metric], czColors[metric][0]];
@@ -92,11 +92,11 @@ document.addEventListener("DOMContentLoaded", function () {
     czSection.id = "legend-cz";
     legend.appendChild(czSection);
 
-    // Lower section: Static Green Degree Rate legend
+    // Lower section: Static AIREA Degree Rate legend
     const instSection = document.createElement("div");
     instSection.id = "legend-inst";
     instSection.innerHTML = `
-      <h4 style="margin:10px 0 5px;">Green Degree Rate</h4>
+      <h4 style="margin:10px 0 5px;">AIREA Degree Rate</h4>
       <div><span style="background:rgba(178,34,34,0.5);width:8px;height:8px;
                    display:inline-block;border-radius:50%;margin-right:5px;vertical-align:middle;"></span>
         Low < 25%</div>
@@ -283,7 +283,7 @@ function loadInstituteDataForYear(year) {
 
           const html = `
             <strong>${props.instnm}</strong><br>
-            CZ: ${(+props.CZ_label).toLocaleString()}<br>
+            ${props.CZ_label}<br>
             AIREA Degrees: ${(+props.inst_green_cmplt_tot).toLocaleString()}<br>
             Rate: ${(props.inst_perc_green_tot*100).toFixed(1)}%
           `;
