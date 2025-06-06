@@ -8,9 +8,9 @@ institutes_sf <- ccrc_cip_comp %>%
   filter(!is.na(longitud), !is.na(latitude)) %>%
   st_as_sf(coords = c("longitud", "latitude"), crs = 4326)
 
-# If desired, select only the needed fields: year, institution name (instnm), and green completion percentage (inst_perc_green_tot)
+# If desired, select only the needed fields: year, institution name (instnm), CZ , CZ label and green completion / percentage (inst_perc_green_tot)
 institutes_sf1 <- institutes_sf %>%
-  select(year, instnm, inst_perc_green_tot, inst_green_cmplt_tot)
+  select(year, instnm, CZ, CZ_label,inst_perc_green_tot, inst_green_cmplt_tot)
 
 # Define the list of years to export (e.g., 2010 through 2013)
 years <- sort(unique(ccrc_cip_comp$year))
