@@ -4,6 +4,16 @@
 # Read supply data from an RDS file; this data is used for filtering/searching institutions.
 ccrc_cip_comp <- readRDS("ccrc_cip_comp_cz.rds") # JR added _cz
 
+# treemap_data <- ccrc_cip_comp %>%
+#   group_by(mfreq_green_cip_stitle1, instnm) %>%
+#   summarise(total_completions = sum(mfreq_green_cip_cmplt1, na.rm = TRUE)) %>%
+#   ungroup()
+# 
+# treemap_data %>% 
+#   View()
+# 
+# ccrc_cip_comp$mfreq
+
 # Ensure each commuting zone feature gets a unique ID (for Mapbox feature-state management like hover events)
 #CZ_job_post <- CZ_job_post %>% 
 # mutate(id = row_number())
@@ -103,13 +113,13 @@ server <- function(input, output, session) {
   # Render Treemap Plot (Plotly)
   # -------------------------------
   # Load a list of pre-generated treemap plots from an RDS file.
-  treemap_list <- readRDS("Green_degree_treemap_plotly_list.rds")
+  # treemap_list <- readRDS("Green_degree_treemap_plotly_list.rds")
   
-  output$treemapPlot <- renderPlotly({
-    req(input$selected_year_supply)  # Ensure the selected year is available
-    # Extract the treemap plot corresponding to the selected year.
-    treemap_list[[as.character(input$selected_year_supply)]]
-  })
+  # output$treemapPlot <- renderPlotly({
+  #   # req(input$selected_year_supply)  # Ensure the selected year is available
+  #   # Extract the treemap plot corresponding to the selected year.
+  #   # treemap_list[[as.character(input$selected_year_supply)]]
+  # })
   
   # render supply table
   
@@ -119,14 +129,57 @@ server <- function(input, output, session) {
       filter(year == input$selected_year_supply) %>% 
       select(Year = year, Name = instnm, `Commuting Zone` = CZ_label, completions = inst_cmplt_o) %>% 
       arrange(desc(completions))
-    
-    # Wei, I need help here - how to select the variable(s) of note here - completions, %, and per 1000
+
     DT::datatable(my_df,
+                  selection = 'single',
                   options = list(
-                    pageLength = 5,       # show 5 rows per page
+                    pageLength = 10,       # show 5 rows per page
                     lengthChange = FALSE  # (optional) hide the “Show X entries” dropdown
                   ))
   })
+  
+  output$supply_degrees_by_institution <- renderPlot({
+    
+    req(input$supply_table_rows_selected)       # wait for a click
+    
+    dat <- ccrc_cip_comp %>%                   # rebuild the same table data
+      filter(year == input$selected_year_supply) %>% 
+      select(
+        Year             = year,
+        Name             = instnm,
+        `Commuting Zone` = CZ_label,
+        completions      = inst_cmplt_o
+      ) %>%
+      arrange(desc(completions))
+    
+    # now subset it
+    my_inst <- dat[input$supply_table_rows_selected, , drop = FALSE]
+  
+    ccrc_cip_comp %>%                   # rebuild the same table data
+      select(
+        Year             = year,
+        Name             = instnm,
+        `Commuting Zone` = CZ_label,
+        completions      = inst_cmplt_o
+      ) %>%
+      arrange(desc(completions)) %>% 
+      filter(Name == my_inst$Name) %>% 
+      ggplot(aes(x = Year, y = completions)) +
+      geom_point() +
+      geom_line() +
+      theme_minimal() +
+      ylab("Completions") +
+      ggtitle(stringr::str_c("AIREA completions for ", my_inst$Name))
+  })
+  
+  # output$supply_degrees_by_institution <- renderPlot( {
+  #   
+  #   my_df <- ccrc_cip_comp %>% 
+  #     filter(Name == input$selected_institution) %>% 
+  #     select(Year = year, Name = instnm, `Commuting Zone` = CZ_label, completions = inst_cmplt_o) %>% 
+  #     arrange(desc(completions))
+  #   
+  # })
   
   # create graph of degrees
   output$degrees_over_time <- renderPlot({
@@ -159,14 +212,14 @@ server <- function(input, output, session) {
   
   output$demand_table <- DT::renderDT( {
     
-    my_df_demand <-  readRDS("d_SOC.rds") %>% # need to make reactive (see above)
-      filter(YEAR == input$selected_year_demand) %>% 
-      select(YEAR, Occupation, SOC_CODE, TOTAL_POSTS) %>% 
-      arrange(desc(TOTAL_POSTS))
+    my_df_demand <- readr::read_csv("cz-postings-by-year-2025-06-19-01.csv") %>% # need to make reactive (see above)
+      # filter(YEAR == input$selected_year_demand) %>% 
+      select(CZ, AIREA = airea, SOC_CODE, TOTAL_JOB_POSTS) %>% 
+      arrange(CZ)
     
     DT::datatable(my_df_demand,
                   options = list(
-                    pageLength = 5,       # show 5 rows per page
+                    pageLength = 10,       # show 5 rows per page
                     lengthChange = FALSE  # (optional) hide the “Show X entries” dropdown
                   ))
   })

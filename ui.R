@@ -68,7 +68,10 @@ ui <- fluidPage(
         "input.tabs == 'treemap'",
         selectInput("selected_year_supply", "Select Year:",
                     choices = sort(unique(CZ_job_post$YEAR), decreasing = TRUE),
-                    selected = max(CZ_job_post$YEAR))
+                    selected = max(CZ_job_post$YEAR)),
+        textInput("searched_institution", "Institution Name:", 
+                  placeholder = "Enter institution name to search", 
+                  width = "100%"),
       ),
       
       # controls shown only on demand tab
@@ -106,9 +109,8 @@ ui <- fluidPage(
                  div(id="map", style="height:700px;width:100%;")
         ),
         
-        tabPanel("Community Colleges AIREA Degree Completions", value = "treemap",
+        tabPanel("Degree Completions", value = "treemap",
                  
-                 # Top Row: Table Output
                  fluidRow(
                    column(12,
                           tags$h5("Table with the institutions with the greatest number of degree completions"),
@@ -122,8 +124,8 @@ ui <- fluidPage(
                  # Bottom Row: Treemap (left) and Bar chart (right)
                  fluidRow(
                    column(7, # Adjust width as needed (e.g., 6 for equal split)
-                          tags$h5("Tree map showing frequent Degrees (CIPs)"), # Title for the treemap
-                          plotlyOutput("treemapPlot", height = "600px") # Your existing treemap plot
+                          tags$h5("Click on an institution to see the number of AIREA degree completions by year"), # Title for the treemap
+                          plotOutput("supply_degrees_by_institution")
                    ),
                    
                    column(5, # Adjust width as needed
