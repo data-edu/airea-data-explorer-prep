@@ -54,7 +54,7 @@ d_prepped
 # cz_tw
 bls <- read_dta("prep/bls_ed_requirement.dta")
 
-soc <- bls %>% 
+bls <- bls %>% 
   rename(SOC_CODE = soc) %>% 
   select(-3)
 
@@ -99,8 +99,7 @@ cz_air1 %>% write_csv("cz_air1.csv") # for the table and the time series plot
 
 cz_air1
 
-# ------------------------------------------------------------------------
-cz_to_plot <- "Aberdeen, SD CZ"          # pick a CZ ---------------------
+cz_to_plot <- "Aberdeen, SD CZ"
 
 soc_totals <- cz_tw %>%                                  # full table
   filter(CZ_label == cz_to_plot) %>%                     # one CZ
@@ -113,33 +112,33 @@ soc_totals <- cz_tw %>%                                  # full table
   slice_head(n = 15) %>%                                 # top 15 codes
   mutate(soc_title = str_wrap(soc_title, 24))            # gentle wrapping
 
-ggplot(soc_totals,
-       aes(area = posts,
-           fill = posts,
-           label = soc_title)) +
-  geom_treemap() +
-  geom_fit_text(                     # <- the general fit-text geom
-    stat      = "treemapify",        # **tell it to run the treemap layout**
-    grow      = TRUE,
-    reflow    = TRUE,
-    min.size  = 6,                   # hide labels that would be <6 pt
-    colour    = "white",
-    padding.x = grid::unit(1, "mm"),
-    padding.y = grid::unit(1, "mm")
-  ) +
-  scale_fill_continuous(type = "viridis") +
-  labs(title = glue("Job-posting volume by SOC code ({cz_to_plot})"),
-       fill  = "Job posts") +
-  theme(legend.position = "bottom")
+onet
+
+# ggplot(soc_totals) +
+#   geom_treemap(aes(area = posts, fill = posts)) +
+#   geom_fit_text(
+#     aes(area = posts, label = soc_title),  # map area + label again
+#     stat      = "treemap",                 # << key linelib
+#     grow      = TRUE,
+#     reflow    = TRUE,
+#     min.size  = 6,                         # hide tiny unreadable labels
+#     colour    = "white",
+#     padding.x = grid::unit(1, "mm"),
+#     padding.y = grid::unit(1, "mm")
+#   ) +
+#   scale_fill_continuous(type = "viridis") +
+#   labs(title = glue("Job-posting volume by SOC code ({cz_to_plot})"),
+#        fill  = "Job posts") +
+#   theme(legend.position = "bottom")
 
 # CZ label by year by SOC, with SOC labels and SOC AIREA status
-# and postings, %, and by 1000 residents
+# and postings, %, and by 1000 residents, as well as job requirement
 
 # supply
 
 institutions <- read_rds("ccrc_cip_comp_cz.rds")
 
-institutions$mfreq_green_cip_title1
+institutions
 
 institutions %>% 
   select(instnm, year, hbcu, tribal, rural)
