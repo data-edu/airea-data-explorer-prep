@@ -2,7 +2,30 @@
 # Load Supply Data (for Institution Search)
 # ============================================================
 # Read supply data from an RDS file; this data is used for filtering/searching institutions.
-ccrc_cip_comp <- readRDS("ccrc_cip_comp_cz.rds") # JR added _cz
+
+supply <- readRDS("supply-raw-data.rds")
+
+cz_air1 <- cz_tw %>%                     # starting data
+  group_by(CZ_label, YEAR) %>%           # one row per CZ-year
+  summarise(
+    posts_air1       = sum(TOTAL_JOB_POSTS[airea == 1], na.rm = TRUE),
+    posts_air1_p1000 = sum(JOB_POSTS_P1000[airea == 1], na.rm = TRUE),
+    posts_all        = sum(TOTAL_JOB_POSTS,                   na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    ## (3) airea-1 share of all postings
+    posts_air1_pct = posts_air1 / posts_all * 100
+  ) %>%
+  select(CZ_label, YEAR,
+         airea_posts = posts_air1,
+         airea_posts_p1000 = posts_air1_p1000,
+         airea_pct = posts_air1_pct,
+         everything())
+
+cz_air1
+
+demand <- readRDS("demand-raw-data.rds")
 
 # treemap_data <- ccrc_cip_comp %>%
 #   group_by(mfreq_green_cip_stitle1, instnm) %>%

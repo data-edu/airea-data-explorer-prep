@@ -3,7 +3,10 @@
 institution by year by CIP, with CIP labels and CIP AIREA status
 and with rural, tribal, HBCU, and entry level education flags, and completions and %
 
+## what we need for demand
 
+CZ label by year by SOC, with SOC labels and SOC AIREA status
+and postings, %, and by 1000 residents
 
 ## Wei
 

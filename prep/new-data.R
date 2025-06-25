@@ -19,7 +19,7 @@ county_pop_ts <- map_dfr(
     mutate(year = .x)         # tag each row with its ACS year
 )
 
-county_pop_ts %>% 
+county_pop_ts <- county_pop_ts %>% 
   select(-moe)
 
 # demand
@@ -35,6 +35,11 @@ sff <- sf::read_sf("prep/CommutingZones2020_County_GIS_files/county20.shp") %>%
   # mutate(COUNTY = as.integer(COUNTY)) %>%
   as_tibble() %>%
   select(-geometry)
+
+# sff <- sff %>% 
+#   left_join(county_pop_ts, by = "COUNTY") %>% 
+#   rename(population_estimate = estimate) %>% 
+#   select(COUNTY, CZ, population_estimate)
 
 d <- d %>%
   mutate(airea = if_else(SOC_CODE %in% onet$soc, 1, 0))
@@ -69,7 +74,8 @@ cz_tw <- d_prepped %>%
   left_join(select(cz_labels, CZ, CZ_label))
 
 cz_tw %>% 
-  left_join(bls)
+  left_join(bls) %>% 
+  select(CZ_label, YEAR, SOC_CODE, AIREA = airea, ed_req, everything(), -CZ)
 
 cz_air1 <- cz_tw %>%                     # starting data
   group_by(CZ_label, YEAR) %>%           # one row per CZ-year
@@ -93,11 +99,16 @@ cz_air1 <- cz_tw %>%                     # starting data
   select(CZ_label, YEAR,
          airea_posts = posts_air1,
          airea_posts_p1000 = posts_air1_p1000,
-         airea_pct = posts_air1_pct)
+         airea_pct = posts_air1_pct,
+         everything())
 
-cz_air1 %>% write_csv("cz_air1.csv") # for the table and the time series plot
+# CZ label by year by SOC, with SOC labels and SOC AIREA status
+# and postings, %, and by 1000 residents
 
 cz_air1
+
+cz_air1 %>% 
+  write_csv("cz_air1.csv") # for the table and the time series plot
 
 cz_to_plot <- "Aberdeen, SD CZ"
 
@@ -136,12 +147,18 @@ onet
 
 # supply
 
-institutions <- read_rds("ccrc_cip_comp_cz.rds")
+institutions <- read_dta("prep/ccrc_cip_comp_acea.dta")
 
-institutions
-
-institutions %>% 
-  select(instnm, year, hbcu, tribal, rural)
+institutions %>% select(instnm, year, hbcu, tribal, rural,
+                        inst_cmplt_tot,
+                        inst_perc_acea_tot,
+                        mfreq_acea_cip_cmplt1, mfreq_acea_cip_cmplt2, mfreq_acea_cip_cmplt3, mfreq_acea_cip_cmplt4, mfreq_acea_cip_cmplt5) %>% 
+  mutate(mfreq_acea_cip1_pct = mfreq_acea_cip_cmplt1 / inst_cmplt_tot,
+         mfreq_acea_cip2_pct = mfreq_acea_cip_cmplt2 / inst_cmplt_tot,
+         mfreq_acea_cip3_pct = mfreq_acea_cip_cmplt3 / inst_cmplt_tot,
+         mfreq_acea_cip4_pct = mfreq_acea_cip_cmplt4 / inst_cmplt_tot,
+         mfreq_acea_cip5_pct = mfreq_acea_cip_cmplt5 / inst_cmplt_tot) %>% 
+  glimpse()
 
 # institution by year by CIP, with CIP labels and CIP AIREA status
-# and with rural, tribal, HBCU, and entry level education flags, and completions and %
+# and with rural, tribal, HBCU, and completions and %
