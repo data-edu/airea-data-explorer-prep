@@ -1,14 +1,14 @@
 # ============================================================
 # Load Data
 # ============================================================
+library(dplyr)
+library(tidyr)
+
 # Load supply data (institution completions)
 supply <- readRDS("prep/supply-institutions-raw-data.rds")
 
 # Load demand data (job postings)
 demand <- readRDS("prep/demand-jobs-raw-data.rds")
-
-# Load CZ job post data for map functionality
-CZ_job_post <- readRDS("CZ_job_post.rds")
 
 # Load SOC and CIP labels for treemaps (using new files)
 soc_labels <- NULL
@@ -38,6 +38,14 @@ tryCatch({
     
 }, error = function(e) {
   print("Could not load label files, using simple labels")
+})
+
+# Load scatter plot data
+scatter_data <- NULL
+tryCatch({
+  scatter_data <- readRDS("scatter_plot_data.rds")
+}, error = function(e) {
+  print("Could not load scatter plot data")
 })
 
 # ============================================================
@@ -449,6 +457,49 @@ server <- function(input, output, session) {
       layout(
         title = paste("Top 5 AIREA SOCs for", my_cz$CZ_label, "(All Years through 2024)"),
         margin = list(t = 50, l = 25, r = 25, b = 25)
+      )
+  })
+  
+  # ============================================================
+  # SCATTER PLOT TAB (Supply vs Demand) 
+  # ============================================================
+  
+  # Scatter plot
+  output$scatter_plot <- renderPlotly({
+    req(scatter_data)
+    
+    p <- scatter_data %>%
+      ggplot(aes(x = airea_posting_percentage, y = airea_completion_percentage)) +
+      geom_point(aes(size = total_completions, 
+                     color = size_category,
+                     text = paste0(
+                       "<b>", gsub(" CZ$", "", CZ_label), "</b><br>",
+                       "AIREA Supply: ", sprintf("%.1f%%", airea_completion_percentage), "<br>",
+                       "AIREA Demand: ", sprintf("%.1f%%", airea_posting_percentage), "<br>",
+                       "Total Completions: ", format(total_completions, big.mark = ","), "<br>",
+                       "Institutions: ", num_institutions
+                     )), 
+                 alpha = 0.7) +
+      geom_smooth(method = "lm", se = TRUE, color = "darkblue", alpha = 0.3) +
+      theme_minimal() +
+      labs(
+        title = "AIREA Supply vs Demand by Commuting Zone",
+        x = "AIREA Demand (% of Job Posts)",
+        y = "AIREA Supply (% of Completions)",
+        size = "Total Completions",
+        color = "CZ Size"
+      ) +
+      scale_size_continuous(range = c(2, 12), guide = "none") +
+      scale_color_manual(values = c("Small (< 1,000)" = "#ff7f0e", 
+                                   "Medium (1,000 - 5,000)" = "#2ca02c", 
+                                   "Large (> 5,000)" = "#1f77b4")) +
+      theme(legend.position = "bottom")
+    
+    ggplotly(p, tooltip = "text") %>%
+      layout(
+        title = list(text = "AIREA Supply vs Demand by Commuting Zone", 
+                     font = list(size = 16)),
+        margin = list(t = 50, l = 50, r = 50, b = 100)
       )
   })
   

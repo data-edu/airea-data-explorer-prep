@@ -180,6 +180,30 @@ ui <- fluidPage(
                       plotlyOutput("demand_treemap", height = "500px")
                )
              )
+    ),
+    
+    tabPanel("Supply vs Demand", value = "scatter",
+
+             # Description
+             fluidRow(
+               column(12,
+                      tags$h4("AIREA Supply vs Demand by Commuting Zone"),
+                      tags$div(
+                        style = "background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px;",
+                        tags$p(
+                          style = "margin: 0; color: #495057;",
+                          "This scatter plot compares AIREA supply (% of completions from community colleges) vs AIREA demand (% of job postings) at the commuting zone level. Each point represents a commuting zone, with size indicating total completions."
+                        )
+                      )
+               )
+             ),
+             
+             # Scatter plot
+             fluidRow(
+               column(12,
+                      plotlyOutput("scatter_plot", height = "600px")
+               )
+             )
     )
   ),
 
