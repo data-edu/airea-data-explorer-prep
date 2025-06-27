@@ -123,6 +123,11 @@ Or open `app.R` in RStudio and click **Run App**.
 - **JavaScript libraries**: Mapbox GL JS v2.14.1, Turf.js
 - **Data**: U.S. Commuting Zone boundaries, green job postings dataset
 
+## How to deploy
+
+- First, run `deploy-setup.R`
+- Then, deploy only the contents of the `app` folder
+
 ## Contributing
 
 Contributions are welcome! Please open an issue or submit a pull

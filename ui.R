@@ -203,6 +203,17 @@ ui <- fluidPage(
                column(12,
                       plotlyOutput("scatter_plot", height = "600px")
                )
+             ),
+             
+             tags$hr(),
+             
+             # Second scatter plot for raw counts
+             fluidRow(
+               column(12,
+                      tags$h5("AIREA Raw Counts by Commuting Zone"),
+                      tags$p("This scatter plot shows the absolute numbers of AIREA completions vs AIREA job postings by commuting zone."),
+                      plotlyOutput("scatter_plot_counts", height = "600px")
+               )
              )
     )
   ),

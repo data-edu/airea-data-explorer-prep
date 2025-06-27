@@ -3,6 +3,7 @@
 # ============================================================
 library(dplyr)
 library(tidyr)
+library(scales)
 
 # Load supply data (institution completions)
 supply <- readRDS("prep/supply-institutions-raw-data.rds")
@@ -498,6 +499,47 @@ server <- function(input, output, session) {
     ggplotly(p, tooltip = "text") %>%
       layout(
         title = list(text = "AIREA Supply vs Demand by Commuting Zone", 
+                     font = list(size = 16)),
+        margin = list(t = 50, l = 50, r = 50, b = 100)
+      )
+  })
+  
+  # Raw counts scatter plot
+  output$scatter_plot_counts <- renderPlotly({
+    req(scatter_data)
+    
+    p <- scatter_data %>%
+      ggplot(aes(x = total_airea_posts, y = total_airea_completions)) +
+      geom_point(aes(size = total_completions, 
+                     color = size_category,
+                     text = paste0(
+                       "<b>", gsub(" CZ$", "", CZ_label), "</b><br>",
+                       "AIREA Completions: ", format(total_airea_completions, big.mark = ","), "<br>",
+                       "AIREA Job Posts: ", format(total_airea_posts, big.mark = ","), "<br>",
+                       "Total Completions: ", format(total_completions, big.mark = ","), "<br>",
+                       "Institutions: ", num_institutions
+                     )), 
+                  alpha = 0.7) +
+      geom_smooth(method = "lm", se = TRUE, color = "darkblue", alpha = 0.3) +
+      theme_minimal() +
+      labs(
+        title = "AIREA Raw Counts: Completions vs Job Postings by Commuting Zone",
+        x = "AIREA Job Posts (Total Count)",
+        y = "AIREA Completions (Total Count)",
+        size = "Total Completions",
+        color = "CZ Size"
+      ) +
+      scale_size_continuous(range = c(2, 12), guide = "none") +
+      scale_color_manual(values = c("Small (< 1,000)" = "#ff7f0e", 
+                                    "Medium (1,000 - 5,000)" = "#2ca02c", 
+                                    "Large (> 5,000)" = "#1f77b4")) +
+      scale_x_continuous(labels = scales::comma) +
+      scale_y_continuous(labels = scales::comma) +
+      theme(legend.position = "bottom")
+    
+    ggplotly(p, tooltip = "text") %>%
+      layout(
+        title = list(text = "AIREA Raw Counts: Completions vs Job Postings by Commuting Zone", 
                      font = list(size = 16)),
         margin = list(t = 50, l = 50, r = 50, b = 100)
       )
