@@ -14,7 +14,7 @@ document.addEventListener("DOMContentLoaded", function () {
     container: "map",
     style: "mapbox://styles/mapbox/navigation-day-v1",
     center: [-95, 40],
-    zoom: 3.5,
+    zoom: 3.2,
     maxBounds: [[-130, 5], [-60, 60]],
     projection: { name: "albers" }
   });
