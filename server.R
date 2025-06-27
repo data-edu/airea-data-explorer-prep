@@ -2,10 +2,10 @@
 # Load Data
 # ============================================================
 # Load supply data (institution completions)
-supply <- readRDS("supply-institutions-raw-data.rds")
+supply <- readRDS("prep/supply-institutions-raw-data.rds")
 
 # Load demand data (job postings)
-demand <- readRDS("demand-jobs-raw-data.rds")
+demand <- readRDS("prep/demand-jobs-raw-data.rds")
 
 # Load CZ job post data for map functionality
 CZ_job_post <- readRDS("CZ_job_post.rds")
