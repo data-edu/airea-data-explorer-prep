@@ -159,7 +159,7 @@ server <- function(input, output, session) {
       )
 
     DT::datatable(my_df_supply,
-                  selection = 'single',
+                  selection = list(mode = 'single', selected = 1),  # Select first row by default
                   options = list(
                     pageLength = 10,
                     lengthChange = FALSE
@@ -178,7 +178,7 @@ server <- function(input, output, session) {
       ggplot(aes(x = year, y = inst_perc_acea_tot * 100)) +
       geom_point(color = "steelblue", size = 3) +
       geom_line(color = "steelblue", linewidth = 1) +
-      geom_smooth(color = "red", method = "lm", se = FALSE) +
+      geom_smooth(color = "darkblue", method = "lm", se = FALSE) +
       theme_minimal() +
       labs(
         title = paste("AIREA Completion Percentage Over Time:", my_inst$instnm),
@@ -333,7 +333,7 @@ server <- function(input, output, session) {
       )
 
     DT::datatable(my_df_demand,
-                  selection = 'single',
+                  selection = list(mode = 'single', selected = 1),  # Select first row by default
                   options = list(
                     pageLength = 10,
                     lengthChange = FALSE
@@ -359,7 +359,7 @@ server <- function(input, output, session) {
       ggplot(aes(x = YEAR, y = airea_percentage)) +
       geom_line(color = "steelblue", linewidth = 1) +
       geom_point(color = "steelblue", size = 2) +
-      geom_smooth(color = "red", method = "lm", se = FALSE) +
+      geom_smooth(color = "darkblue", method = "lm", se = FALSE) +
       theme_minimal() +
       labs(
         title = paste("AIREA Job Posting Percentage Over Time:", my_cz$CZ_label),

@@ -110,7 +110,14 @@ ui <- fluidPage(
              fluidRow(
                column(12,
                       tags$h4("Institutions by Total Completions (All Years)"),
-                      tags$p("Showing all institutions with data aggregated across all years, sorted by total completions. Click on an institution to see details below."),
+                      tags$div(
+                        style = "background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px;",
+                        tags$p(
+                          style = "margin: 0; font-weight: bold; color: #495057;",
+                          "Click on any institution row in the table below to see its AIREA completion trends and top programs!"
+                        )
+                      ),
+                      tags$p("Showing all institutions with data aggregated across all years, sorted by total completions. The top institution is selected by default."),
                       DT::dataTableOutput("supply_table") 
                )
              ),
@@ -142,7 +149,14 @@ ui <- fluidPage(
              fluidRow(
                column(12,
                       tags$h4("Commuting Zones by AIREA Job Posting Percentage (All Years)"),
-                      tags$p("Showing all commuting zones, sorted by AIREA percentage. Click on a CZ to see details below."),
+                      tags$div(
+                        style = "background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px;",
+                        tags$p(
+                          style = "margin: 0; font-weight: bold; color: #495057;",
+                          "Click on any commuting zone row in the table below to see its AIREA job posting trends and top occupations!"
+                        )
+                      ),
+                      tags$p("Showing all commuting zones, sorted by AIREA percentage. The top CZ is selected by default."),
                       DT::dataTableOutput("demand_table") 
                )
              ),
