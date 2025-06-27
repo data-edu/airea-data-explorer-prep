@@ -1,0 +1,16 @@
+options(
+  ## Use the system ‘curl’ binary instead of the in-process libcurl
+  rsconnect.http = "curl",                 # avoids some proxy-SSL quirks
+
+  ## Show what’s going on (delete these three lines once it works)
+  rsconnect.http.trace   = TRUE,
+  rsconnect.http.verbose = TRUE,
+
+  ## Extra curl settings – see ?curl::curl_options
+  rsconnect.libcurl.options = list(        # handed straight to curl
+    timeout        = 600,   # no hard cut-off before 10 min
+    connecttimeout = 60,    # 60 s to complete the TLS handshake
+    low_speed_time = 60,    # drop only if transfer <1 kB/s for 60 s
+    low_speed_limit = 1000  # (= 1 kB/s)
+  )
+)

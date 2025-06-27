@@ -126,7 +126,16 @@ Or open `app.R` in RStudio and click **Run App**.
 ## How to deploy
 
 - First, run `deploy-setup.R`
-- Then, deploy only the contents of the `app` folder
+- Then, deploy only the contents of the `app` folder:
+
+```{r}
+  rsconnect::deployApp(
+  appDir  = "app",
+  appName = "airea-data-explorer",
+  account = "ed-analytics",
+  server  = "shinyapps.io"
+)
+```
 
 ## Contributing
 
