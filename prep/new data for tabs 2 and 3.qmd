@@ -58,9 +58,15 @@ crosswalk_soc <- filter(crosswalk, socflag == 0 & cipflag == 0)
 crosswalk_soc <- crosswalk_soc %>% 
   count(soc, soc2018title)
 
+crosswalk_soc %>% 
+  write_rds("soc-codes-and-titles.csv")
+
 crosswalk_cip <- filter(crosswalk, socflag == 0 & cipflag == 0)
 crosswalk_cip <- crosswalk_cip %>% 
   count(cip, cip2020title)
+
+crosswalk_cip %>% 
+  write_rds("cip-codes-and-titles.csv")
 
 d <- d %>%
   mutate(airea = if_else(SOC_CODE %in% crosswalk_soc$soc, 1, 0))
@@ -191,7 +197,9 @@ institutions %>% select(instnm, year, latitude, longitud,
                         hbcu, tribal, rural,
                         inst_cmplt_tot,
                         inst_perc_acea_tot,
-                        mfreq_acea_cip_cmplt1, mfreq_acea_cip_cmplt2, mfreq_acea_cip_cmplt3, mfreq_acea_cip_cmplt4, mfreq_acea_cip_cmplt5) %>% 
+                        mfreq_acea_cip_cmplt1, mfreq_acea_cip_cmplt2, mfreq_acea_cip_cmplt3, mfreq_acea_cip_cmplt4, mfreq_acea_cip_cmplt5,
+                        mfreq_acea_cip1, mfreq_acea_cip2, mfreq_acea_cip3, mfreq_acea_cip4, mfreq_acea_cip5
+                        ) %>% 
   mutate(mfreq_acea_cip1_pct = mfreq_acea_cip_cmplt1 / inst_cmplt_tot,
          mfreq_acea_cip2_pct = mfreq_acea_cip_cmplt2 / inst_cmplt_tot,
          mfreq_acea_cip3_pct = mfreq_acea_cip_cmplt3 / inst_cmplt_tot,
