@@ -11,6 +11,7 @@ library(ggplot2)       # Data visualization
 library(scales)        # Formatting for plots
 library(plotly)        # For interactive plotting
 library(shinythemes)
+library(DT)            # For data tables
 source("mapboxtoken_setup.R")  # Loads mapbox_token used for Mapbox access
 
 # ============================================================
@@ -68,32 +69,12 @@ ui <- fluidPage(
         "input.tabs == 'treemap'",
         selectInput("selected_year_supply", "Select Year:",
                     choices = sort(unique(CZ_job_post$YEAR), decreasing = TRUE),
-                    selected = max(CZ_job_post$YEAR)),
-        textInput("searched_institution", "Institution Name:", 
-                  placeholder = "Enter institution name to search", 
-                  width = "100%"),
+                    selected = max(CZ_job_post$YEAR))
       ),
       
-      # controls shown only on demand tab
-      
+      # Controls shown only on demand tab
       conditionalPanel(
         "input.tabs == 'demand'",
-        # checkboxGroupInput(
-        #   "selected_SOCs", 
-        #   "Select SOC:",
-        #   choices = c(
-        #     "11-1011" = "Management",
-        #     "13-1199" = "Business and Financial Operations",
-        #     "15-1212" = "Information Security Analysts",
-        #     "17-2199" = "Engineers",
-        #     "19-2041" = "Environmental Scientists and Specialists",
-        #     "19-4099" = "Life, Physical, and Social Science Technicians",
-        #     "27-1024" = "Graphic Designers",
-        #     "27-3031" = "Public Relations Specialists"
-        #   )
-        #   
-        # ),
-        
         selectInput("selected_year_demand", "Select Year:",
                     choices = sort(unique(CZ_job_post$YEAR), decreasing = TRUE),
                     selected = max(CZ_job_post$YEAR))
@@ -111,26 +92,36 @@ ui <- fluidPage(
         
         tabPanel("Degree Completions", value = "treemap",
                  
+                 # Top Row: Table Output
                  fluidRow(
                    column(12,
-                          tags$h5("Table with the institutions with the greatest number of degree completions"),
-                          # You can add a specific title for the table if needed, e.g., tags$h4("Institution Data").
+                          tags$h4("Top 10 Institutions by Degree Completions"),
                           DT::dataTableOutput("supply_table") 
                    )
                  ),
                  
                  tags$hr(),
                  
-                 # Bottom Row: Treemap (left) and Bar chart (right)
+                 # Second Row: Time series and trend plots
                  fluidRow(
-                   column(7, # Adjust width as needed (e.g., 6 for equal split)
-                          tags$h5("Click on an institution to see the number of AIREA degree completions by year"), # Title for the treemap
-                          plotOutput("supply_degrees_by_institution")
+                   column(6,
+                          tags$h5("Click on an institution above to see its completions over time"),
+                          plotOutput("supply_degrees_by_institution", height = "300px")
                    ),
                    
-                   column(5, # Adjust width as needed
-                          tags$h5("Degrees (Lines represent individual CIP codes)"), # Title for the bar chart
-                          plotOutput("degrees_over_time") # Placeholder for your bar chart output
+                   column(6,
+                          tags$h5("Overall Completions Trend"),
+                          plotOutput("supply_trend", height = "300px")
+                   )
+                 ),
+                 
+                 tags$hr(),
+                 
+                 # Third Row: Treemap
+                 fluidRow(
+                   column(12,
+                          tags$h5("Institution Treemap (Top 50 by Completions)"),
+                          plotlyOutput("supply_treemap", height = "500px")
                    )
                  )
         ),
@@ -138,24 +129,47 @@ ui <- fluidPage(
         tabPanel("AIREA-related Job Postings", value = "demand",
 
                  # Top Row: Table Output
-                 tags$h5("Job Postings per SOC code"), # Title for the treemap
-                 
                  fluidRow(
                    column(12,
-                          # The screenshot shows "Institution" as a key part of this section.
-                          # You can add a specific title for the table if needed, e.g., tags$h4("Institution Data").
+                          tags$h4("Top 10 Commuting Zones by Job Postings"),
                           DT::dataTableOutput("demand_table") 
                    )
                  ),
                  
                  tags$hr(),
                  
-                 # Bottom Row: Treemap (left) and Bar chart (right)
+                 # Second Row: Time series and trend plots
                  fluidRow(
-                   column(12), # Adjust width as needed (e.g., 6 for equal split)
-                   tags$h5("SOC codes for most common jobs"), # Title for the treemap
-                   plotlyOutput("trendPlot", height = "600px") # Your existing treemap plot
+                   column(6,
+                          tags$h5("Click on a CZ above to see its job postings over time"),
+                          plotOutput("demand_cz_trend", height = "300px")
+                   ),
+                   
+                   column(6,
+                          tags$h5("Overall Job Postings Trend"),
+                          plotOutput("demand_trend", height = "300px")
+                   )
                  ),
+                 
+                 tags$hr(),
+                 
+                 # Third Row: Treemap
+                 fluidRow(
+                   column(12,
+                          tags$h5("Commuting Zone Treemap (Top 50 by Job Postings)"),
+                          plotlyOutput("demand_treemap", height = "500px")
+                   )
+                 ),
+                 
+                 tags$hr(),
+                 
+                 # Fourth Row: Legacy SOC trend plot
+                 fluidRow(
+                   column(12,
+                          tags$h5("SOC Codes for Most Common Jobs"),
+                          plotlyOutput("trendPlot", height = "400px")
+                   )
+                 )
         ),
     )
   )
