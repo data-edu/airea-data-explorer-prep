@@ -212,18 +212,39 @@ server <- function(input, output, session) {
         CIP_Percentage = CIP_Percentage * 100
       )
 
+    # Get top 5 and calculate "Other"
+    top_5_data <- treemap_data %>% head(5)
+    other_completions <- treemap_data %>% slice(6:n()) %>% summarise(CIP_Completions = sum(CIP_Completions, na.rm = TRUE)) %>% pull(CIP_Completions)
+    other_percentage <- treemap_data %>% slice(6:n()) %>% summarise(CIP_Percentage = sum(CIP_Percentage, na.rm = TRUE)) %>% pull(CIP_Percentage)
+    
+    # Add "Other" row if there are additional CIPs
+    if (other_completions > 0) {
+      other_row <- data.frame(
+        CIP_Code = 999999,  # Use a dummy code for "Other"
+        CIP_Completions = other_completions,
+        CIP_Percentage = other_percentage
+      )
+      treemap_data <- rbind(top_5_data, other_row)
+    } else {
+      treemap_data <- top_5_data
+    }
+
     # Join with CIP labels to get proper titles
     if (!is.null(cip_labels) && nrow(cip_labels) > 0) {
       treemap_data <- treemap_data %>%
         left_join(cip_labels %>% select(cip, cip2020title), by = c("CIP_Code" = "cip")) %>%
         mutate(
-          CIP_Label = ifelse(!is.na(cip2020title), 
-                            paste0("CIP ", CIP_Code, ": ", cip2020title),
-                            paste0("CIP ", CIP_Code))
+          CIP_Label = ifelse(CIP_Code == 999999, 
+                            "Other AIREA CIPs",
+                            ifelse(!is.na(cip2020title), 
+                                   paste0("CIP ", CIP_Code, ": ", cip2020title),
+                                   paste0("CIP ", CIP_Code)))
         )
     } else {
       treemap_data <- treemap_data %>%
-        mutate(CIP_Label = paste0("CIP ", CIP_Code))
+        mutate(CIP_Label = ifelse(CIP_Code == 999999, 
+                                 "Other AIREA CIPs",
+                                 paste0("CIP ", CIP_Code)))
     }
 
     if (nrow(treemap_data) == 0) {
@@ -372,21 +393,41 @@ server <- function(input, output, session) {
       mutate(
         percentage_of_all_posts = (total_posts / cz_total_posts) * 100
       ) %>%
-      arrange(desc(total_posts)) %>%
-      head(10)
+      arrange(desc(total_posts))
     
-    # Join with SOC labels if available
+    # Get top 5 and calculate "Other"
+    top_5_data <- treemap_data %>% head(5)
+    other_posts <- treemap_data %>% slice(6:n()) %>% summarise(total_posts = sum(total_posts, na.rm = TRUE)) %>% pull(total_posts)
+    other_percentage <- (other_posts / cz_total_posts) * 100
+    
+    # Add "Other" row if there are additional SOCs
+    if (other_posts > 0) {
+      other_row <- data.frame(
+        SOC_CODE = "Other",
+        total_posts = other_posts,
+        percentage_of_all_posts = other_percentage
+      )
+      treemap_data <- rbind(top_5_data, other_row)
+    } else {
+      treemap_data <- top_5_data
+    }
+    
+    # Join with SOC labels if available (for top 5 only)
     if (!is.null(soc_labels) && nrow(soc_labels) > 0) {
       treemap_data <- treemap_data %>%
         left_join(soc_labels %>% select(soc, soc2018title) %>% distinct(), by = c("SOC_CODE" = "soc")) %>%
         mutate(
-          SOC_Label = ifelse(!is.na(soc2018title), 
-                            paste0("SOC ", SOC_CODE, ": ", soc2018title),
-                            paste0("SOC ", SOC_CODE))
+          SOC_Label = ifelse(SOC_CODE == "Other", 
+                            "Other AIREA SOCs",
+                            ifelse(!is.na(soc2018title), 
+                                   paste0("SOC ", SOC_CODE, ": ", soc2018title),
+                                   paste0("SOC ", SOC_CODE)))
         )
     } else {
       treemap_data <- treemap_data %>%
-        mutate(SOC_Label = paste0("SOC ", SOC_CODE))
+        mutate(SOC_Label = ifelse(SOC_CODE == "Other", 
+                                 "Other AIREA SOCs",
+                                 paste0("SOC ", SOC_CODE)))
     }
     
     # Create treemap
@@ -406,7 +447,7 @@ server <- function(input, output, session) {
       customdata = ~percentage_of_all_posts
     ) %>%
       layout(
-        title = paste("Top 10 AIREA SOCs for", my_cz$CZ_label, "(All Years through 2024)"),
+        title = paste("Top 5 AIREA SOCs for", my_cz$CZ_label, "(All Years through 2024)"),
         margin = list(t = 50, l = 25, r = 25, b = 25)
       )
   })
