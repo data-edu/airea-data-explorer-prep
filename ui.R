@@ -95,23 +95,19 @@ ui <- fluidPage(
                  # Top Row: Table Output
                  fluidRow(
                    column(12,
-                          tags$h4("Top 10 Institutions by Degree Completions"),
+                          tags$h4("Institutions by Total Completions (All Years)"),
+                          tags$p("Showing all institutions with data aggregated across all years, sorted by total completions. Click on an institution to see details below."),
                           DT::dataTableOutput("supply_table") 
                    )
                  ),
                  
                  tags$hr(),
                  
-                 # Second Row: Time series and trend plots
+                 # Second Row: Time series plot (full width)
                  fluidRow(
-                   column(6,
-                          tags$h5("Click on an institution above to see its completions over time"),
-                          plotOutput("supply_degrees_by_institution", height = "300px")
-                   ),
-                   
-                   column(6,
-                          tags$h5("Overall Completions Trend"),
-                          plotOutput("supply_trend", height = "300px")
+                   column(12,
+                          tags$h5("Click on an institution above to see its AIREA completion percentage over time"),
+                          plotOutput("supply_degrees_by_institution", height = "400px")
                    )
                  ),
                  
@@ -120,7 +116,7 @@ ui <- fluidPage(
                  # Third Row: Treemap
                  fluidRow(
                    column(12,
-                          tags$h5("Institution Treemap (Top 50 by Completions)"),
+                          tags$h5("Click on an institution above to see its top 5 AIREA CIPs for the selected year"),
                           plotlyOutput("supply_treemap", height = "500px")
                    )
                  )
@@ -131,23 +127,19 @@ ui <- fluidPage(
                  # Top Row: Table Output
                  fluidRow(
                    column(12,
-                          tags$h4("Top 10 Commuting Zones by Job Postings"),
+                          tags$h4("Commuting Zones by AIREA Job Posting Percentage"),
+                          tags$p("Showing all commuting zones, sorted by AIREA percentage. Click on a CZ to see details below."),
                           DT::dataTableOutput("demand_table") 
                    )
                  ),
                  
                  tags$hr(),
                  
-                 # Second Row: Time series and trend plots
+                 # Second Row: Time series plot (full width)
                  fluidRow(
-                   column(6,
-                          tags$h5("Click on a CZ above to see its job postings over time"),
-                          plotOutput("demand_cz_trend", height = "300px")
-                   ),
-                   
-                   column(6,
-                          tags$h5("Overall Job Postings Trend"),
-                          plotOutput("demand_trend", height = "300px")
+                   column(12,
+                          tags$h5("Click on a CZ above to see its AIREA job posting percentage over time"),
+                          plotOutput("demand_cz_trend", height = "400px")
                    )
                  ),
                  
@@ -156,18 +148,8 @@ ui <- fluidPage(
                  # Third Row: Treemap
                  fluidRow(
                    column(12,
-                          tags$h5("Commuting Zone Treemap (Top 50 by Job Postings)"),
+                          tags$h5("Click on a CZ above to see its top 10 SOCs"),
                           plotlyOutput("demand_treemap", height = "500px")
-                   )
-                 ),
-                 
-                 tags$hr(),
-                 
-                 # Fourth Row: Legacy SOC trend plot
-                 fluidRow(
-                   column(12,
-                          tags$h5("SOC Codes for Most Common Jobs"),
-                          plotlyOutput("trendPlot", height = "400px")
                    )
                  )
         ),

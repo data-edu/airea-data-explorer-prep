@@ -66,9 +66,9 @@ server <- function(input, output, session) {
         "<strong>Year:</strong> ", search_result$year, "<br>",
         "<strong>Total Completions:</strong> ",
         format(search_result$inst_cmplt_tot, big.mark = ",", scientific = FALSE), "<br>",
-        "<strong>ACEA Completions:</strong> ",
+        "<strong>AIREA Completions:</strong> ",
         format(search_result$inst_perc_acea_tot * search_result$inst_cmplt_tot, big.mark = ",", scientific = FALSE), "<br>",
-        "<strong>ACEA Percentage:</strong> ",
+        "<strong>AIREA Percentage:</strong> ",
         sprintf("%.1f%%", search_result$inst_perc_acea_tot * 100)
       )
       coords <- list(
@@ -90,27 +90,35 @@ server <- function(input, output, session) {
   })
   
   # ============================================================
-  # SUPPLY TAB (Institution Completions)
+  # SUPPLY TAB (Institution Completions) - OPTIMIZED
   # ============================================================
   
-  # Top 10 institutions table
-  output$supply_table <- DT::renderDT({
-    req(input$selected_year_supply)
-    
-    my_df <- supply %>% 
-      filter(year == input$selected_year_supply) %>% 
-      select(
-        Year = year, 
-        Name = instnm, 
-        `Total Completions` = inst_cmplt_tot,
-        `ACEA Completions` = mfreq_acea_cip_cmplt1,
-        `ACEA Percentage` = inst_perc_acea_tot
+  # Reactive expression for supply data aggregated across all years
+  supply_aggregated_data <- reactive({
+    supply %>% 
+      group_by(instnm) %>%
+      summarise(
+        `Total Completions` = sum(inst_cmplt_tot, na.rm = TRUE),
+        `AIREA Completions` = sum(mfreq_acea_cip_cmplt1, na.rm = TRUE),
+        `AIREA Percentage` = sum(mfreq_acea_cip_cmplt1, na.rm = TRUE) / sum(inst_cmplt_tot, na.rm = TRUE),
+        .groups = "drop"
       ) %>% 
-      arrange(desc(`Total Completions`)) %>%
-      head(10) %>%
+      arrange(desc(`Total Completions`))
+  })
+  
+  # Reactive expression for selected institution
+  selected_institution <- reactive({
+    req(input$supply_table_rows_selected)
+    req(supply_aggregated_data())
+    supply_aggregated_data()[input$supply_table_rows_selected, "instnm"]
+  })
+  
+  # Top 10 institutions table (sorted by aggregate total completions)
+  output$supply_table <- DT::renderDT({
+    my_df <- supply_aggregated_data() %>%
       mutate(
-        `ACEA Percentage` = sprintf("%.1f%%", `ACEA Percentage` * 100),
-        `ACEA Completions` = ifelse(is.na(`ACEA Completions`), 0, `ACEA Completions`)
+        `AIREA Percentage` = sprintf("%.1f%%", `AIREA Percentage` * 100),
+        `AIREA Completions` = ifelse(is.na(`AIREA Completions`), 0, `AIREA Completions`)
       )
 
     DT::datatable(my_df,
@@ -121,119 +129,122 @@ server <- function(input, output, session) {
                   ))
   })
   
-  # Institution time series plot
+  # Institution time series plot (showing AIREA percentage)
   output$supply_degrees_by_institution <- renderPlot({
-    req(input$supply_table_rows_selected)
+    req(selected_institution())
     
-    # Get selected institution
-    selected_data <- supply %>% 
-      filter(year == input$selected_year_supply) %>% 
-      select(
-        Year = year,
-        Name = instnm,
-        `Total Completions` = inst_cmplt_tot,
-        `ACEA Completions` = mfreq_acea_cip_cmplt1,
-        `ACEA Percentage` = inst_perc_acea_tot
-      ) %>%
-      arrange(desc(`Total Completions`)) %>%
-      head(10)
+    my_inst <- selected_institution()
     
-    my_inst <- selected_data[input$supply_table_rows_selected, "Name"]
-    
-    # Create time series plot
+    # Create time series plot showing AIREA percentage
     supply %>% 
-      filter(instnm == my_inst$Name) %>% 
-      ggplot(aes(x = year, y = inst_cmplt_tot)) +
+      filter(instnm == my_inst$instnm) %>% 
+      ggplot(aes(x = year, y = inst_perc_acea_tot * 100)) +
       geom_point(color = "steelblue", size = 3) +
       geom_line(color = "steelblue", linewidth = 1) +
       theme_minimal() +
       labs(
-        title = paste("Total Completions Over Time:", my_inst$Name),
+        title = paste("AIREA Completion Percentage Over Time:", my_inst$instnm),
         x = "Year",
-        y = "Total Completions"
+        y = "AIREA Completion Percentage (%)"
       ) +
-      scale_y_continuous(labels = scales::comma) +
+      scale_y_continuous(labels = function(x) paste0(x, "%")) +
       scale_x_continuous(breaks = seq(2010, 2023, 2))
   })
   
-  # Supply tree plot (treemap)
+  # Supply tree plot (treemap) - Top 5 CIPs for selected institution
   output$supply_treemap <- renderPlotly({
+    req(selected_institution())
     req(input$selected_year_supply)
     
-    # Create treemap data
-    treemap_data <- supply %>%
-      filter(year == input$selected_year_supply) %>%
-      group_by(instnm) %>%
-      summarise(
-        total_completions = sum(inst_cmplt_tot, na.rm = TRUE),
-        acea_completions = sum(mfreq_acea_cip_cmplt1, na.rm = TRUE),
-        .groups = "drop"
+    my_inst <- selected_institution()
+    
+    # Create treemap data for top 5 CIPs for the selected institution
+    # Get the institution data with all 5 CIP fields for the selected year
+    inst_data <- supply %>%
+      filter(year == input$selected_year_supply, instnm == my_inst$instnm)
+    
+    if (nrow(inst_data) == 0) {
+      # Create empty treemap if no data
+      plot_ly(
+        type = "treemap",
+        labels = "No AIREA CIPs",
+        parents = "",
+        values = 1
       ) %>%
-      arrange(desc(total_completions)) %>%
-      head(50)  # Top 50 institutions for treemap
-    
-    # Create treemap
-    plot_ly(
-      data = treemap_data,
-      type = "treemap",
-      labels = ~instnm,
-      parents = ~"All Institutions",
-      values = ~total_completions,
-      textinfo = "label+value+percent parent",
-      hovertemplate = paste(
-        "<b>%{label}</b><br>",
-        "Total Completions: %{value:,}<br>",
-        "ACEA Completions: %{customdata:,}<br>",
-        "<extra></extra>"
-      ),
-      customdata = ~acea_completions
-    ) %>%
-      layout(
-        title = paste("Top 50 Institutions by Completions -", input$selected_year_supply),
-        margin = list(t = 50, l = 25, r = 25, b = 25)
-      )
-  })
-  
-  # Overall completions trend
-  output$supply_trend <- renderPlot({
-    yearly_totals <- supply %>%
-      group_by(year) %>%
-      summarize(
-        total_completions = sum(inst_cmplt_tot, na.rm = TRUE),
-        acea_completions = sum(mfreq_acea_cip_cmplt1, na.rm = TRUE),
-        .groups = "drop"
-      )
-    
-    ggplot(yearly_totals, aes(x = year)) +
-      geom_line(aes(y = total_completions, color = "Total Completions"), linewidth = 1) +
-      geom_line(aes(y = acea_completions, color = "ACEA Completions"), linewidth = 1) +
-      geom_point(
-        data = dplyr::filter(yearly_totals, year == input$selected_year_supply),
-        aes(y = total_completions),
-        color = "red",
-        size = 3
-      ) +
-      theme_minimal() +
-      labs(
-        title = "Completions Trend Over Time",
-        x = "Year",
-        y = "Number of Completions",
-        color = "Type"
-      ) +
-      scale_y_continuous(labels = scales::comma) +
-      scale_x_continuous(breaks = seq(2010, 2023, 2)) +
-      scale_color_manual(values = c("Total Completions" = "steelblue", "ACEA Completions" = "darkgreen"))
+        layout(
+          title = paste("Top 5 AIREA CIPs for", my_inst$instnm, "-", input$selected_year_supply),
+          margin = list(t = 50, l = 25, r = 25, b = 25)
+        )
+    } else {
+      # Extract all 5 CIPs and their percentages
+      treemap_data <- data.frame(
+        CIP_Number = 1:5,
+        CIP_Completions = c(
+          inst_data$mfreq_acea_cip_cmplt1,
+          inst_data$mfreq_acea_cip_cmplt2,
+          inst_data$mfreq_acea_cip_cmplt3,
+          inst_data$mfreq_acea_cip_cmplt4,
+          inst_data$mfreq_acea_cip_cmplt5
+        ),
+        CIP_Percentage = c(
+          inst_data$mfreq_acea_cip1_pct,
+          inst_data$mfreq_acea_cip2_pct,
+          inst_data$mfreq_acea_cip3_pct,
+          inst_data$mfreq_acea_cip4_pct,
+          inst_data$mfreq_acea_cip5_pct
+        )
+      ) %>%
+        filter(!is.na(CIP_Completions), CIP_Completions > 0) %>%
+        mutate(
+          CIP_Label = paste0("CIP ", CIP_Number),
+          CIP_Percentage = CIP_Percentage * 100
+        )
+      
+      if (nrow(treemap_data) == 0) {
+        # Create empty treemap if no CIPs
+        plot_ly(
+          type = "treemap",
+          labels = "No AIREA CIPs",
+          parents = "",
+          values = 1
+        ) %>%
+          layout(
+            title = paste("Top 5 AIREA CIPs for", my_inst$instnm, "-", input$selected_year_supply),
+            margin = list(t = 50, l = 25, r = 25, b = 25)
+          )
+      } else {
+        # Create treemap
+        plot_ly(
+          data = treemap_data,
+          type = "treemap",
+          labels = ~CIP_Label,
+          parents = ~"AIREA CIPs",
+          values = ~CIP_Completions,
+          textinfo = "label+value+percent parent",
+          hovertemplate = paste(
+            "<b>%{label}</b><br>",
+            "Completions: %{value:,}<br>",
+            "Percentage: %{customdata:.1f}%<br>",
+            "<extra></extra>"
+          ),
+          customdata = ~CIP_Percentage
+        ) %>%
+          layout(
+            title = paste("Top 5 AIREA CIPs for", my_inst$instnm, "-", input$selected_year_supply),
+            margin = list(t = 50, l = 25, r = 25, b = 25)
+          )
+      }
+    }
   })
   
   # ============================================================
-  # DEMAND TAB (Job Postings)
+  # DEMAND TAB (Job Postings) - OPTIMIZED
   # ============================================================
   
-  # Top 10 CZs table
-  output$demand_table <- DT::renderDT({
+  # Reactive expression for demand data by year
+  demand_year_data <- reactive({
     req(input$selected_year_demand)
-    
-    my_df_demand <- demand %>%
+    demand %>%
       filter(YEAR == input$selected_year_demand) %>%
       group_by(CZ_label) %>%
       summarise(
@@ -246,6 +257,19 @@ server <- function(input, output, session) {
         airea_percentage = (airea_posts / total_posts) * 100,
         posts_per_1000 = (total_posts / population) * 1000
       ) %>%
+      arrange(desc(airea_percentage))
+  })
+  
+  # Reactive expression for selected CZ
+  selected_cz <- reactive({
+    req(input$demand_table_rows_selected)
+    req(demand_year_data())
+    demand_year_data()[input$demand_table_rows_selected, "CZ_label"]
+  })
+  
+  # All CZs table (sorted by AIREA percentage, showing first 10)
+  output$demand_table <- DT::renderDT({
+    my_df_demand <- demand_year_data() %>%
       select(
         `Commuting Zone` = CZ_label,
         `Total Posts` = total_posts,
@@ -253,8 +277,6 @@ server <- function(input, output, session) {
         `AIREA %` = airea_percentage,
         `Posts per 1000` = posts_per_1000
       ) %>%
-      arrange(desc(`Total Posts`)) %>%
-      head(10) %>%
       mutate(
         `AIREA %` = sprintf("%.1f%%", `AIREA %`),
         `Posts per 1000` = sprintf("%.1f", `Posts per 1000`)
@@ -268,25 +290,13 @@ server <- function(input, output, session) {
                   ))
   })
   
-  # CZ time series plot
+  # CZ time series plot (showing AIREA percentage)
   output$demand_cz_trend <- renderPlot({
-    req(input$demand_table_rows_selected)
+    req(selected_cz())
     
-    # Get selected CZ
-    selected_data <- demand %>%
-      filter(YEAR == input$selected_year_demand) %>%
-      group_by(CZ_label) %>%
-      summarise(
-        total_posts = sum(TOTAL_JOB_POSTS, na.rm = TRUE),
-        airea_posts = sum(TOTAL_JOB_POSTS[AIREA == 1], na.rm = TRUE),
-        .groups = "drop"
-      ) %>%
-      arrange(desc(total_posts)) %>%
-      head(10)
+    my_cz <- selected_cz()
     
-    my_cz <- selected_data[input$demand_table_rows_selected, "CZ_label"]
-    
-    # Create time series plot
+    # Create time series plot showing AIREA percentage
     demand %>% 
       filter(CZ_label == my_cz$CZ_label) %>%
       group_by(YEAR) %>%
@@ -295,89 +305,65 @@ server <- function(input, output, session) {
         airea_posts = sum(TOTAL_JOB_POSTS[AIREA == 1], na.rm = TRUE),
         .groups = "drop"
       ) %>%
-      ggplot(aes(x = YEAR)) +
-      geom_line(aes(y = total_posts, color = "Total Posts"), linewidth = 1) +
-      geom_line(aes(y = airea_posts, color = "AIREA Posts"), linewidth = 1) +
-      geom_point(aes(y = total_posts), color = "steelblue", size = 2) +
+      mutate(airea_percentage = (airea_posts / total_posts) * 100) %>%
+      ggplot(aes(x = YEAR, y = airea_percentage)) +
+      geom_line(color = "steelblue", linewidth = 1) +
+      geom_point(color = "steelblue", size = 2) +
       theme_minimal() +
       labs(
-        title = paste("Job Postings Over Time:", my_cz$CZ_label),
+        title = paste("AIREA Job Posting Percentage Over Time:", my_cz$CZ_label),
         x = "Year",
-        y = "Number of Job Postings",
-        color = "Type"
+        y = "AIREA Job Posting Percentage (%)"
       ) +
-      scale_y_continuous(labels = scales::comma) +
-      scale_x_continuous(breaks = seq(2010, 2025, 2)) +
-      scale_color_manual(values = c("Total Posts" = "steelblue", "AIREA Posts" = "darkgreen"))
+      scale_y_continuous(labels = function(x) paste0(x, "%")) +
+      scale_x_continuous(breaks = seq(2010, 2025, 2))
   })
   
-  # Demand tree plot (treemap)
+  # Demand tree plot (treemap) - Top SOCs for selected CZ
   output$demand_treemap <- renderPlotly({
-    req(input$selected_year_demand)
+    req(selected_cz())
     
-    # Create treemap data
+    my_cz <- selected_cz()
+    
+    # Create treemap data for top SOCs for the selected CZ
     treemap_data <- demand %>%
-      filter(YEAR == input$selected_year_demand) %>%
-      group_by(CZ_label) %>%
+      filter(YEAR == input$selected_year_demand, CZ_label == my_cz$CZ_label) %>%
+      group_by(SOC_CODE) %>%
       summarise(
         total_posts = sum(TOTAL_JOB_POSTS, na.rm = TRUE),
         airea_posts = sum(TOTAL_JOB_POSTS[AIREA == 1], na.rm = TRUE),
         .groups = "drop"
       ) %>%
+      mutate(airea_percentage = (airea_posts / total_posts) * 100) %>%
       arrange(desc(total_posts)) %>%
-      head(50)  # Top 50 CZs for treemap
+      head(10) %>%
+      mutate(
+        SOC_Label = paste0("SOC ", SOC_CODE),
+        airea_percentage = ifelse(is.na(airea_percentage), 0, airea_percentage)
+      )
     
     # Create treemap
     plot_ly(
       data = treemap_data,
       type = "treemap",
-      labels = ~CZ_label,
-      parents = ~"All Commuting Zones",
+      labels = ~SOC_Label,
+      parents = ~"All SOCs",
       values = ~total_posts,
       textinfo = "label+value+percent parent",
       hovertemplate = paste(
         "<b>%{label}</b><br>",
         "Total Posts: %{value:,}<br>",
         "AIREA Posts: %{customdata:,}<br>",
+        "AIREA %: %{customdata2:.1f}%<br>",
         "<extra></extra>"
       ),
-      customdata = ~airea_posts
+      customdata = ~airea_posts,
+      customdata2 = ~airea_percentage
     ) %>%
       layout(
-        title = paste("Top 50 Commuting Zones by Job Postings -", input$selected_year_demand),
+        title = paste("Top 10 SOCs for", my_cz$CZ_label, "-", input$selected_year_demand),
         margin = list(t = 50, l = 25, r = 25, b = 25)
       )
-  })
-  
-  # Overall job postings trend
-  output$demand_trend <- renderPlot({
-    yearly_totals <- demand %>%
-      group_by(YEAR) %>%
-      summarize(
-        total_posts = sum(TOTAL_JOB_POSTS, na.rm = TRUE),
-        airea_posts = sum(TOTAL_JOB_POSTS[AIREA == 1], na.rm = TRUE),
-        .groups = "drop"
-      )
-    
-    ggplot(yearly_totals, aes(x = YEAR)) +
-      geom_line(aes(y = total_posts, color = "Total Posts"), linewidth = 1) +
-      geom_line(aes(y = airea_posts, color = "AIREA Posts"), linewidth = 1) +
-      geom_point(
-        data = dplyr::filter(yearly_totals, YEAR == input$selected_year_demand),
-        aes(y = total_posts),
-        color = "red",
-        size = 3
-      ) +
-      theme_minimal() +
-      labs(
-        title = "Job Postings Trend Over Time",
-        x = "Year",
-        y = "Number of Job Postings",
-        color = "Type"
-      ) +
-      scale_y_continuous(labels = scales::comma) +
-      scale_x_continuous(breaks = seq(2010, 2025, 2)) +
-      scale_color_manual(values = c("Total Posts" = "steelblue", "AIREA Posts" = "darkgreen"))
   })
   
   # ============================================================
@@ -390,36 +376,5 @@ server <- function(input, output, session) {
   output$treemapPlot <- renderPlotly({
     req(input$selected_year_supply)
     treemap_list[[ as.character(input$selected_year_supply) ]]
-  })
-  
-  # Legacy trend plot
-  output$trendPlot <- renderPlotly({
-    p_SOC <- readRDS("d_SOC.rds") %>%
-      ggplot(aes(
-        x      = YEAR,
-        y      = TOTAL_POSTS,
-        group  = Occupation,
-        colour = Occupation,
-        text   = paste0(
-          "Year: ", YEAR, "<br>",
-          "Total Posts: ", scales::comma(TOTAL_POSTS), "<br>",
-          "Occupation: ", Occupation
-        )
-      )) +
-      geom_line() +
-      scale_x_continuous(breaks = 2010:2024) +
-      scale_y_continuous(labels = scales::comma) +
-      scale_color_brewer(palette = "Set1") +
-      theme_minimal() +
-      theme(legend.position = "bottom") +
-      labs(
-        title   = "Green Jobs Postings By SOC Code",
-        caption = "Source: Lightcast postings data",
-        x       = NULL,
-        y       = NULL
-      ) +
-      theme(legend.position = "none")
-    
-    plotly::ggplotly(p_SOC, tooltip = "text")
   })
 }
