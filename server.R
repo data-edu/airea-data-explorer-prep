@@ -10,9 +10,35 @@ demand <- readRDS("prep/demand-jobs-raw-data.rds")
 # Load CZ job post data for map functionality
 CZ_job_post <- readRDS("CZ_job_post.rds")
 
-# Load SOC and CIP labels for treemaps
-soc_labels <- readRDS("d_SOC.rds")
-cip_labels <- readRDS("ccrc_cip_comp.rds")
+# Load SOC and CIP labels for treemaps (using new files)
+soc_labels <- NULL
+cip_labels <- NULL
+tryCatch({
+  library(haven)
+  # Use comprehensive file that has both SOC and CIP codes
+  comprehensive_labels <- read_dta("prep/camssoc&ciplist.dta")
+  
+  # Extract unique SOC codes and titles
+  soc_labels <- comprehensive_labels %>%
+    select(soc, soc2018title) %>%
+    distinct() %>%
+    filter(!is.na(soc), !is.na(soc2018title))
+  
+  # Extract unique CIP codes and titles  
+  cip_labels <- comprehensive_labels %>%
+    select(cip, cip2020title) %>%
+    distinct() %>%
+    filter(!is.na(cip), !is.na(cip2020title)) %>%
+    mutate(
+      # Convert CIP codes from "01.0000" format to numeric format
+      cip_numeric = as.numeric(gsub("\\.", "", cip))
+    ) %>%
+    select(cip_numeric, cip2020title) %>%
+    rename(cip = cip_numeric)
+    
+}, error = function(e) {
+  print("Could not load label files, using simple labels")
+})
 
 # ============================================================
 # Server Logic
@@ -152,6 +178,7 @@ server <- function(input, output, session) {
       ggplot(aes(x = year, y = inst_perc_acea_tot * 100)) +
       geom_point(color = "steelblue", size = 3) +
       geom_line(color = "steelblue", linewidth = 1) +
+      geom_smooth(color = "red", method = "lm", se = FALSE) +
       theme_minimal() +
       labs(
         title = paste("AIREA Completion Percentage Over Time:", my_inst$instnm),
@@ -168,27 +195,38 @@ server <- function(input, output, session) {
     
     my_inst <- selected_institution()
     
-    # Create treemap data for top 5 CIPs for the selected institution (aggregated across all years)
-    # Get the institution data with all 5 CIP fields aggregated across all years
+    # Use the most recent year for the institution
     inst_data <- supply %>%
       filter(instnm == my_inst$instnm) %>%
-      group_by(instnm) %>%
-      summarise(
-        mfreq_acea_cip_cmplt1 = sum(mfreq_acea_cip_cmplt1, na.rm = TRUE),
-        mfreq_acea_cip_cmplt2 = sum(mfreq_acea_cip_cmplt2, na.rm = TRUE),
-        mfreq_acea_cip_cmplt3 = sum(mfreq_acea_cip_cmplt3, na.rm = TRUE),
-        mfreq_acea_cip_cmplt4 = sum(mfreq_acea_cip_cmplt4, na.rm = TRUE),
-        mfreq_acea_cip_cmplt5 = sum(mfreq_acea_cip_cmplt5, na.rm = TRUE),
-        mfreq_acea_cip1_pct = mean(mfreq_acea_cip1_pct, na.rm = TRUE),
-        mfreq_acea_cip2_pct = mean(mfreq_acea_cip2_pct, na.rm = TRUE),
-        mfreq_acea_cip3_pct = mean(mfreq_acea_cip3_pct, na.rm = TRUE),
-        mfreq_acea_cip4_pct = mean(mfreq_acea_cip4_pct, na.rm = TRUE),
-        mfreq_acea_cip5_pct = mean(mfreq_acea_cip5_pct, na.rm = TRUE),
-        .groups = "drop"
+      arrange(desc(year)) %>%
+      slice(1)
+
+    # Extract completions, percentages, and actual CIP codes for the 5 CIPs
+    treemap_data <- data.frame(
+      CIP_Code = as.numeric(inst_data[1, paste0("mfreq_acea_cip", 1:5)]),
+      CIP_Completions = as.numeric(inst_data[1, paste0("mfreq_acea_cip_cmplt", 1:5)]),
+      CIP_Percentage = as.numeric(inst_data[1, paste0("mfreq_acea_cip", 1:5, "_pct")])
+    ) %>%
+      filter(!is.na(CIP_Completions), CIP_Completions > 0, !is.na(CIP_Code), CIP_Code != "") %>%
+      mutate(
+        CIP_Percentage = CIP_Percentage * 100
       )
-    
-    if (nrow(inst_data) == 0) {
-      # Create empty treemap if no data
+
+    # Join with CIP labels to get proper titles
+    if (!is.null(cip_labels) && nrow(cip_labels) > 0) {
+      treemap_data <- treemap_data %>%
+        left_join(cip_labels %>% select(cip, cip2020title), by = c("CIP_Code" = "cip")) %>%
+        mutate(
+          CIP_Label = ifelse(!is.na(cip2020title), 
+                            paste0("CIP ", CIP_Code, ": ", cip2020title),
+                            paste0("CIP ", CIP_Code))
+        )
+    } else {
+      treemap_data <- treemap_data %>%
+        mutate(CIP_Label = paste0("CIP ", CIP_Code))
+    }
+
+    if (nrow(treemap_data) == 0) {
       plot_ly(
         type = "treemap",
         labels = "No AIREA CIPs",
@@ -196,75 +234,29 @@ server <- function(input, output, session) {
         values = 1
       ) %>%
         layout(
-          title = paste("Top 5 AIREA CIPs for", my_inst$instnm, "(All Years)"),
+          title = paste("Top 5 AIREA CIPs for", my_inst$instnm, "-", inst_data$year),
           margin = list(t = 50, l = 25, r = 25, b = 25)
         )
     } else {
-      # Extract all 5 CIPs and their percentages
-      treemap_data <- data.frame(
-        CIP_Number = 1:5,
-        CIP_Completions = c(
-          inst_data$mfreq_acea_cip_cmplt1,
-          inst_data$mfreq_acea_cip_cmplt2,
-          inst_data$mfreq_acea_cip_cmplt3,
-          inst_data$mfreq_acea_cip_cmplt4,
-          inst_data$mfreq_acea_cip_cmplt5
+      plot_ly(
+        data = treemap_data,
+        type = "treemap",
+        labels = ~CIP_Label,
+        parents = ~"AIREA CIPs",
+        values = ~CIP_Completions,
+        textinfo = "label+value+percent parent",
+        hovertemplate = paste(
+          "<b>%{label}</b><br>",
+          "Completions: %{value:,}<br>",
+          "Percentage: %{customdata:.1f}%<br>",
+          "<extra></extra>"
         ),
-        CIP_Percentage = c(
-          inst_data$mfreq_acea_cip1_pct,
-          inst_data$mfreq_acea_cip2_pct,
-          inst_data$mfreq_acea_cip3_pct,
-          inst_data$mfreq_acea_cip4_pct,
-          inst_data$mfreq_acea_cip5_pct
-        )
+        customdata = ~CIP_Percentage
       ) %>%
-        filter(!is.na(CIP_Completions), CIP_Completions > 0) %>%
-        mutate(
-          CIP_Label = paste0("CIP ", CIP_Number, ": ", 
-                            case_when(
-                              CIP_Number == 1 ~ "Engineering Technologies",
-                              CIP_Number == 2 ~ "Construction Trades", 
-                              CIP_Number == 3 ~ "Mechanic & Repair Technologies",
-                              CIP_Number == 4 ~ "Precision Production",
-                              CIP_Number == 5 ~ "Agriculture & Natural Resources"
-                            )),
-          CIP_Percentage = CIP_Percentage * 100
+        layout(
+          title = paste("Top 5 AIREA CIPs for", my_inst$instnm, "-", inst_data$year),
+          margin = list(t = 50, l = 25, r = 25, b = 25)
         )
-      
-      if (nrow(treemap_data) == 0) {
-        # Create empty treemap if no CIPs
-        plot_ly(
-          type = "treemap",
-          labels = "No AIREA CIPs",
-          parents = "",
-          values = 1
-        ) %>%
-          layout(
-            title = paste("Top 5 AIREA CIPs for", my_inst$instnm, "(All Years)"),
-            margin = list(t = 50, l = 25, r = 25, b = 25)
-          )
-      } else {
-        # Create treemap
-        plot_ly(
-          data = treemap_data,
-          type = "treemap",
-          labels = ~CIP_Label,
-          parents = ~"AIREA CIPs",
-          values = ~CIP_Completions,
-          textinfo = "label+value+percent parent",
-          hovertemplate = paste(
-            "<b>%{label}</b><br>",
-            "Completions: %{value:,}<br>",
-            "Percentage: %{customdata:.1f}%<br>",
-            "<extra></extra>"
-          ),
-          customdata = ~CIP_Percentage
-        ) %>%
-          layout(
-            title = paste("Top 5 AIREA CIPs for", my_inst$instnm, "(All Years)"),
-            margin = list(t = 50, l = 25, r = 25, b = 25)
-          )
-      }
     }
   })
   
@@ -346,6 +338,7 @@ server <- function(input, output, session) {
       ggplot(aes(x = YEAR, y = airea_percentage)) +
       geom_line(color = "steelblue", linewidth = 1) +
       geom_point(color = "steelblue", size = 2) +
+      geom_smooth(color = "red", method = "lm", se = FALSE) +
       theme_minimal() +
       labs(
         title = paste("AIREA Job Posting Percentage Over Time:", my_cz$CZ_label),
@@ -362,40 +355,36 @@ server <- function(input, output, session) {
     
     my_cz <- selected_cz()
     
-    # Create treemap data for top SOCs for the selected CZ (aggregated across all years, excluding 2025)
-    treemap_data <- demand %>%
+    # Get total posts for the CZ (for percentage calculation)
+    cz_total_posts <- demand %>%
       filter(CZ_label == my_cz$CZ_label, YEAR <= 2024) %>%
+      summarise(total_cz_posts = sum(TOTAL_JOB_POSTS, na.rm = TRUE)) %>%
+      pull(total_cz_posts)
+    
+    # Create treemap data for top AIREA SOCs for the selected CZ (aggregated across all years, excluding 2025)
+    treemap_data <- demand %>%
+      filter(CZ_label == my_cz$CZ_label, YEAR <= 2024, AIREA == 1) %>%
       group_by(SOC_CODE) %>%
       summarise(
         total_posts = sum(TOTAL_JOB_POSTS, na.rm = TRUE),
-        airea_posts = sum(TOTAL_JOB_POSTS[AIREA == 1], na.rm = TRUE),
         .groups = "drop"
       ) %>%
-      mutate(airea_percentage = (airea_posts / total_posts) * 100) %>%
-      arrange(desc(total_posts)) %>%
-      head(10) %>%
       mutate(
-        airea_percentage = ifelse(is.na(airea_percentage), 0, airea_percentage)
-      )
+        percentage_of_all_posts = (total_posts / cz_total_posts) * 100
+      ) %>%
+      arrange(desc(total_posts)) %>%
+      head(10)
     
     # Join with SOC labels if available
-    if (exists("soc_labels") && nrow(soc_labels) > 0) {
-      # Debug: print what we're joining
-      print(paste("SOC labels available, rows:", nrow(soc_labels)))
-      print(paste("Treemap data SOC codes:", paste(head(treemap_data$SOC_CODE, 5), collapse = ", ")))
-      
+    if (!is.null(soc_labels) && nrow(soc_labels) > 0) {
       treemap_data <- treemap_data %>%
-        left_join(soc_labels %>% select(SOC_CODE, Occupation) %>% distinct(), by = "SOC_CODE") %>%
+        left_join(soc_labels %>% select(soc, soc2018title) %>% distinct(), by = c("SOC_CODE" = "soc")) %>%
         mutate(
-          SOC_Label = ifelse(!is.na(Occupation), 
-                            paste0("SOC ", SOC_CODE, ": ", Occupation),
+          SOC_Label = ifelse(!is.na(soc2018title), 
+                            paste0("SOC ", SOC_CODE, ": ", soc2018title),
                             paste0("SOC ", SOC_CODE))
         )
-      
-      # Debug: print result
-      print(paste("After join, sample labels:", paste(head(treemap_data$SOC_Label, 3), collapse = ", ")))
     } else {
-      print("SOC labels not available")
       treemap_data <- treemap_data %>%
         mutate(SOC_Label = paste0("SOC ", SOC_CODE))
     }
@@ -405,21 +394,19 @@ server <- function(input, output, session) {
       data = treemap_data,
       type = "treemap",
       labels = ~SOC_Label,
-      parents = ~"All SOCs",
+      parents = ~"AIREA SOCs",
       values = ~total_posts,
       textinfo = "label+value+percent parent",
       hovertemplate = paste(
         "<b>%{label}</b><br>",
         "Total Posts: %{value:,}<br>",
-        "AIREA Posts: %{customdata:,}<br>",
-        "AIREA %: %{customdata2:.1f}%<br>",
+        "Percentage of All Posts: %{customdata:.1f}%<br>",
         "<extra></extra>"
       ),
-      customdata = ~airea_posts,
-      customdata2 = ~airea_percentage
+      customdata = ~percentage_of_all_posts
     ) %>%
       layout(
-        title = paste("Top 10 SOCs for", my_cz$CZ_label, "(All Years through 2024)"),
+        title = paste("Top 10 AIREA SOCs for", my_cz$CZ_label, "(All Years through 2024)"),
         margin = list(t = 50, l = 25, r = 25, b = 25)
       )
   })
