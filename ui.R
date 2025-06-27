@@ -54,9 +54,9 @@ ui <- fluidPage(
       tags$h5("How to use the AIREA Data Explorer", style = "margin-top: 0; margin-bottom: 10px; color: #495057;"),
       tags$ul(
         style = "margin-bottom: 0;",
-        tags$li("Map Tab: Use the controls above the map to change year, color metric, or search for a specific institution"),
-        tags$li("Degree Completions Tab: Click on an institution in the table to see its AIREA completion trends and top programs"),
-        tags$li("Job Postings Tab: Click on a commuting zone in the table to see its AIREA job posting trends and top occupations")
+        tags$li(tags$strong("Map Tab"), ": Use the controls above the map to change year, color metric, or search for a specific institution"),
+        tags$li(tags$strong("Degree Completions Tab"), ": Click on an institution in the table to see its AIREA completion trends and top programs"),
+        tags$li(tags$strong("Job Postings Tab"), ": Click on a commuting zone in the table to see its AIREA job posting trends and top occupations")
       )
     )
   ),
