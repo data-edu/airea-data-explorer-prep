@@ -38,7 +38,7 @@ document.addEventListener("DOMContentLoaded", function () {
   };
   const czLabels = {
     airea_job_posting: "AIREA Job Postings",
-    pct_green:          "Percentage Green",
+    pct_green:          "AIREA Percentage ",
     per1000:            "Jobs per 1,000"
   };
   // Currently selected metric (defaults to "airea_job_posting")
