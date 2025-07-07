@@ -1,17 +1,33 @@
-# ============================================================
+# ==============================================================================
 # Load Data
-# ============================================================
+# ==============================================================================
+
 library(dplyr)
 library(tidyr)
 library(scales)
 
+
+
+# ==============================================================================
 # Load supply data (institution completions)
+# ==============================================================================
+
 supply <- readRDS("prep/supply-institutions-raw-data.rds")
 
+
+
+# ==============================================================================
 # Load demand data (job postings)
+# ==============================================================================
+
 demand <- readRDS("prep/demand-jobs-raw-data.rds")
 
+
+
+# ==============================================================================
 # Load SOC and CIP labels for treemaps (using new files)
+# ==============================================================================
+
 soc_labels <- NULL
 cip_labels <- NULL
 tryCatch({
@@ -49,9 +65,11 @@ tryCatch({
   print("Could not load scatter plot data")
 })
 
-# ============================================================
+
+
+# ==============================================================================
 # Server Logic
-# ============================================================
+# ==============================================================================
 
 server <- function(input, output, session) {
   
@@ -59,6 +77,12 @@ server <- function(input, output, session) {
   observeEvent(input$cz_metric, {
     session$sendCustomMessage("updateCZMetric", input$cz_metric)
   })
+  
+  
+
+  # ============================================================================
+  # Panel 1: Map
+  # ============================================================================
   
   # --- 1. Map tab's year selection & search ---
   observe({
@@ -121,6 +145,7 @@ server <- function(input, output, session) {
     }
   })
   
+  
   # --- 2. Force map resize when switching to Map tab ---
   observeEvent(input$tabs, {
     if (input$tabs == "mainmap") {
@@ -128,9 +153,11 @@ server <- function(input, output, session) {
     }
   })
   
-  # ============================================================
-  # SUPPLY TAB (Institution Completions) - OPTIMIZED
-  # ============================================================
+  
+  
+  # ============================================================================
+  # Panel 2: Degree Completions
+  # ============================================================================
   
   # Reactive expression for supply data aggregated across all years
   supply_aggregated_data <- reactive({
@@ -172,7 +199,9 @@ server <- function(input, output, session) {
                   options = list(
                     pageLength = 10,
                     lengthChange = FALSE
-                  ))
+                  ),
+                  style="bootstrap"
+    ) 
   })
   
   # Institution time series plot (showing AIREA percentage)
@@ -185,9 +214,9 @@ server <- function(input, output, session) {
     supply %>% 
       filter(instnm == my_inst$instnm) %>% 
       ggplot(aes(x = year, y = inst_perc_acea_tot * 100)) +
-      geom_point(color = "steelblue", size = 3) +
-      geom_line(color = "steelblue", linewidth = 1) +
-      geom_smooth(color = "darkblue", method = "lm", se = FALSE) +
+      geom_point(color = "#31a2b6", size = 3) +
+      geom_line(color = "#31a2b6", linewidth = 1) +
+      geom_smooth(color = "#864f83", method = "lm", se = FALSE) +
       theme_minimal() +
       labs(
         title = paste("AIREA Completion Percentage Over Time:", my_inst$instnm),
@@ -290,9 +319,11 @@ server <- function(input, output, session) {
     }
   })
   
-  # ============================================================
-  # DEMAND TAB (Job Postings) - OPTIMIZED
-  # ============================================================
+  
+  
+  # ============================================================================
+  # Panel 3: Job Postings
+  # ============================================================================
   
   # Reactive expression for demand data by year (using most recent year as default, excluding 2025)
   demand_year_data <- reactive({
@@ -346,7 +377,9 @@ server <- function(input, output, session) {
                   options = list(
                     pageLength = 10,
                     lengthChange = FALSE
-                  ))
+                  ),
+                  style="bootstrap"
+    )
   })
   
   # CZ time series plot (showing AIREA percentage)
@@ -366,9 +399,9 @@ server <- function(input, output, session) {
       ) %>%
       mutate(airea_percentage = (airea_posts / total_posts) * 100) %>%
       ggplot(aes(x = YEAR, y = airea_percentage)) +
-      geom_line(color = "steelblue", linewidth = 1) +
-      geom_point(color = "steelblue", size = 2) +
-      geom_smooth(color = "darkblue", method = "lm", se = FALSE) +
+      geom_line(color = "#31a2b6", linewidth = 1) +
+      geom_point(color = "#31a2b6", size = 2) +
+      geom_smooth(color = "#864f83", method = "lm", se = FALSE) +
       theme_minimal() +
       labs(
         title = paste("AIREA Job Posting Percentage Over Time:", my_cz$CZ_label),
@@ -461,9 +494,11 @@ server <- function(input, output, session) {
       )
   })
   
-  # ============================================================
-  # SCATTER PLOT TAB (Supply vs Demand) 
-  # ============================================================
+  
+  
+  # ============================================================================
+  # Panel 4: Supply vs Demand
+  # ============================================================================
   
   # Scatter plot
   output$scatter_plot <- renderPlotly({
@@ -481,7 +516,7 @@ server <- function(input, output, session) {
                        "Institutions: ", num_institutions
                      )), 
                  alpha = 0.7) +
-      geom_smooth(method = "lm", se = TRUE, color = "darkblue", alpha = 0.3) +
+      geom_smooth(method = "lm", se = TRUE, color = "#864f83", alpha = 0.3) +
       theme_minimal() +
       labs(
         title = "AIREA Supply vs Demand by Commuting Zone",
@@ -492,8 +527,8 @@ server <- function(input, output, session) {
       ) +
       scale_size_continuous(range = c(2, 12), guide = "none") +
       scale_color_manual(values = c("Small (< 1,000)" = "#ff7f0e", 
-                                   "Medium (1,000 - 5,000)" = "#2ca02c", 
-                                   "Large (> 5,000)" = "#1f77b4")) +
+                                   "Medium (1,000 - 5,000)" = "#31a2b6", 
+                                   "Large (> 5,000)" = "#5ca060")) +
       theme(legend.position = "bottom")
     
     ggplotly(p, tooltip = "text") %>%
@@ -520,7 +555,7 @@ server <- function(input, output, session) {
                        "Institutions: ", num_institutions
                      )), 
                   alpha = 0.7) +
-      geom_smooth(method = "lm", se = TRUE, color = "darkblue", alpha = 0.3) +
+      geom_smooth(method = "lm", se = TRUE, color = "#864f83", alpha = 0.3) +
       theme_minimal() +
       labs(
         title = "AIREA Raw Counts: Completions vs Job Postings by Commuting Zone",
@@ -531,8 +566,8 @@ server <- function(input, output, session) {
       ) +
       scale_size_continuous(range = c(2, 12), guide = "none") +
       scale_color_manual(values = c("Small (< 1,000)" = "#ff7f0e", 
-                                    "Medium (1,000 - 5,000)" = "#2ca02c", 
-                                    "Large (> 5,000)" = "#1f77b4")) +
+                                    "Medium (1,000 - 5,000)" = "#31a2b6", 
+                                    "Large (> 5,000)" = "#5ca060")) +
       scale_x_continuous(labels = scales::comma) +
       scale_y_continuous(labels = scales::comma) +
       theme(legend.position = "bottom")
