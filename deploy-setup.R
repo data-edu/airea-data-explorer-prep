@@ -20,6 +20,10 @@ print("Copying core application files...")
 file.copy("ui.R", "app/ui.R")
 file.copy("server.R", "app/server.R") 
 file.copy("mapboxtoken_setup.R", "app/mapboxtoken_setup.R")
+file.copy("custom-style.css", "app/custom-style.css")
+
+# Core mapbox token file
+file.copy(".Renviron", "app/.Renviron")
 
 # ============================================================
 # Copy essential data files
