@@ -190,18 +190,20 @@ server <- function(input, output, session) {
       ) %>%
       mutate(
         `Total Completions` = format(`Total Completions`, big.mark = ","),
-        `AIREA Completions` = format(`AIREA Completions`, big.mark = ","),
-        `AIREA %` = sprintf("%.1f%%", `AIREA %` * 100)
+        `AIREA Completions` = format(`AIREA Completions`, big.mark = ",")
+        # Keep AIREA % as numeric for proper sorting
       )
 
     DT::datatable(my_df_supply,
                   selection = list(mode = 'single', selected = 1),  # Select first row by default
                   options = list(
                     pageLength = 10,
-                    lengthChange = FALSE
+                    lengthChange = FALSE,
+                    order = list(list(3, 'desc'))  # Sort by AIREA % (4th column, index 3)
                   ),
                   style="bootstrap"
-    ) 
+    ) %>%
+    DT::formatPercentage(columns = "AIREA %", digits = 1)  # Format as percentage while keeping numeric sorting
   })
   
   # Institution time series plot (showing AIREA percentage)
@@ -216,10 +218,9 @@ server <- function(input, output, session) {
       ggplot(aes(x = year, y = inst_perc_acea_tot * 100)) +
       geom_point(color = "#31a2b6", size = 3) +
       geom_line(color = "#31a2b6", linewidth = 1) +
-      geom_smooth(color = "#864f83", method = "lm", se = FALSE) +
       theme_minimal() +
       labs(
-        title = paste("AIREA Completion Percentage Over Time:", my_inst$instnm),
+        title = paste("AIREA Degrees Over Time:", my_inst$instnm),
         x = "Year",
         y = "AIREA Completion Percentage (%)"
       ) +
@@ -290,7 +291,8 @@ server <- function(input, output, session) {
         type = "treemap",
         labels = "No AIREA CIPs",
         parents = "",
-        values = 1
+        values = 1,
+        textfont = list(size = 14, color = "white")  # Balanced font size for readability
       ) %>%
         layout(
           title = paste("Top 5 AIREA CIPs for", my_inst$instnm, "-", inst_data$year),
@@ -303,7 +305,9 @@ server <- function(input, output, session) {
         labels = ~CIP_Label,
         parents = ~"AIREA CIPs",
         values = ~CIP_Completions,
-        textinfo = "label+value+percent parent",
+        textinfo = "label+text",
+        text = ~paste0(sprintf("%.1f%%", CIP_Percentage)),
+        textfont = list(size = 14, color = "white"),
         hovertemplate = paste(
           "<b>%{label}</b><br>",
           "Completions: %{value:,}<br>",
@@ -339,7 +343,7 @@ server <- function(input, output, session) {
         .groups = "drop"
       ) %>%
       mutate(
-        airea_percentage = (airea_posts / total_posts) * 100,
+        airea_percentage = airea_posts / total_posts,  # Keep as decimal (0-1) for formatPercentage()
         posts_per_1000 = ifelse(is.na(population) | population == 0, 
                                NA, 
                                (total_posts / population) * 1000)
@@ -365,10 +369,10 @@ server <- function(input, output, session) {
         `Posts per 1000` = posts_per_1000
       ) %>%
       mutate(
-        `Commuting Zone` = gsub(" CZ$", "", `Commuting Zone`),
+        `Commuting Zone` = gsub("^[0-9]+ ", "", gsub(" CZ$", "", `Commuting Zone`)),  # Remove ID numbers and " CZ"
         `Total Posts` = format(`Total Posts`, big.mark = ","),
         `AIREA Posts` = format(`AIREA Posts`, big.mark = ","),
-        `AIREA %` = sprintf("%.1f%%", `AIREA %`),
+        # Keep AIREA % as numeric for proper sorting
         `Posts per 1000` = sprintf("%.1f", `Posts per 1000`)
       )
 
@@ -379,7 +383,8 @@ server <- function(input, output, session) {
                     lengthChange = FALSE
                   ),
                   style="bootstrap"
-    )
+    ) %>%
+    DT::formatPercentage(columns = "AIREA %", digits = 1)  # Format as percentage while keeping numeric sorting
   })
   
   # CZ time series plot (showing AIREA percentage)
@@ -397,14 +402,13 @@ server <- function(input, output, session) {
         airea_posts = sum(TOTAL_JOB_POSTS[AIREA == 1], na.rm = TRUE),
         .groups = "drop"
       ) %>%
-      mutate(airea_percentage = (airea_posts / total_posts) * 100) %>%
+      mutate(airea_percentage = (airea_posts / total_posts) * 100) %>%  # Keep as percentage (0-100) for plot display
       ggplot(aes(x = YEAR, y = airea_percentage)) +
       geom_line(color = "#31a2b6", linewidth = 1) +
       geom_point(color = "#31a2b6", size = 2) +
-      geom_smooth(color = "#864f83", method = "lm", se = FALSE) +
       theme_minimal() +
       labs(
-        title = paste("AIREA Job Posting Percentage Over Time:", my_cz$CZ_label),
+        title = paste("AIREA Job Posting Percentage Over Time:", gsub("^[0-9]+ ", "", gsub(" CZ$", "", my_cz$CZ_label))),
         x = "Year",
         y = "AIREA Job Posting Percentage (%)"
       ) +
@@ -479,7 +483,9 @@ server <- function(input, output, session) {
       labels = ~SOC_Label,
       parents = ~"AIREA SOCs",
       values = ~total_posts,
-      textinfo = "label+value+percent parent",
+      textinfo = "label+text",
+      text = ~paste0(sprintf("%.1f%%", percentage_of_all_posts)),
+      textfont = list(size = 14, color = "white"),
       hovertemplate = paste(
         "<b>%{label}</b><br>",
         "Total Posts: %{value:,}<br>",
@@ -489,7 +495,7 @@ server <- function(input, output, session) {
       customdata = ~percentage_of_all_posts
     ) %>%
       layout(
-        title = paste("Top 5 AIREA SOCs for", my_cz$CZ_label, "(All Years through 2024)"),
+        title = paste("Top 5 AIREA SOCs for", gsub("^[0-9]+ ", "", gsub(" CZ$", "", my_cz$CZ_label)), "(All Years through 2024)"),
         margin = list(t = 50, l = 25, r = 25, b = 25)
       )
   })
@@ -509,7 +515,7 @@ server <- function(input, output, session) {
       geom_point(aes(size = total_completions, 
                      color = size_category,
                      text = paste0(
-                       "<b>", gsub(" CZ$", "", CZ_label), "</b><br>",
+                       "<b>", gsub("^[0-9]+ ", "", gsub(" CZ$", "", CZ_label)), "</b><br>",
                        "AIREA Supply: ", sprintf("%.1f%%", airea_completion_percentage), "<br>",
                        "AIREA Demand: ", sprintf("%.1f%%", airea_posting_percentage), "<br>",
                        "Total Completions: ", format(total_completions, big.mark = ","), "<br>",
@@ -548,7 +554,7 @@ server <- function(input, output, session) {
       geom_point(aes(size = total_completions, 
                      color = size_category,
                      text = paste0(
-                       "<b>", gsub(" CZ$", "", CZ_label), "</b><br>",
+                       "<b>", gsub("^[0-9]+ ", "", gsub(" CZ$", "", CZ_label)), "</b><br>",
                        "AIREA Completions: ", format(total_airea_completions, big.mark = ","), "<br>",
                        "AIREA Job Posts: ", format(total_airea_posts, big.mark = ","), "<br>",
                        "Total Completions: ", format(total_completions, big.mark = ","), "<br>",
