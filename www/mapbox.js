@@ -115,22 +115,47 @@ document.addEventListener("DOMContentLoaded", function () {
     map.getContainer().appendChild(legend);
   }
 
-  function updateCZLegend(metric) {
-    const czSection = document.getElementById("legend-cz");
-    const breaks = czBreaks[metric];
-    const colors = czColors[metric];
-    const title  = czLabels[metric];
-    
-    // The upper section HTML
-    let html = `<h4 style="margin:0 0 5px;">${title}</h4>`;
-    // First range
+function updateCZLegend(metric) {
+  const czSection = document.getElementById("legend-cz");
+  const breaks = czBreaks[metric];
+  const colors = czColors[metric];
+  const title  = czLabels[metric];
+
+  const isPercent = (metric === "pct_green");
+
+  let html = `<h4 style="margin:0 0 5px;">${title}</h4>`;
+
+  if (isPercent) {
+    // <1%
+    html += `
+      <div>
+        <span style="background:${colors[0]};width:20px;height:20px;
+                     display:inline-block;margin-right:5px;"></span>
+        &lt;1%
+      </div>`;
+    // 1%-5%、5%-10%、10%-20%
+    for (let i = 0; i < breaks.length - 1; i++) {
+      html += `
+        <div>
+          <span style="background:${colors[i+1]};width:20px;height:20px;
+                       display:inline-block;margin-right:5px;"></span>
+          ${breaks[i]}%–${breaks[i+1]}%
+        </div>`;
+    }
+    // >20%
+    html += `
+      <div>
+        <span style="background:${colors[colors.length-1]};width:20px;height:20px;
+                     display:inline-block;margin-right:5px;"></span>
+        &gt;${breaks[breaks.length-1]}%
+      </div>`;
+  } else {
     html += `
       <div>
         <span style="background:${colors[0]};width:20px;height:20px;
                      display:inline-block;margin-right:5px;"></span>
         < ${breaks[0]}
       </div>`;
-    // Middle ranges
     for (let i = 0; i < breaks.length - 1; i++) {
       html += `
         <div>
@@ -139,16 +164,16 @@ document.addEventListener("DOMContentLoaded", function () {
           ${breaks[i]} – ${breaks[i+1]}
         </div>`;
     }
-    // Last range
     html += `
       <div>
         <span style="background:${colors[colors.length-1]};width:20px;height:20px;
                      display:inline-block;margin-right:5px;"></span>
         ≥ ${breaks[breaks.length-1]}
       </div>`;
-
-    czSection.innerHTML = html;
   }
+
+  czSection.innerHTML = html;
+}
 
 
   // ──────────────────────────────────────────────────────────────────────────
