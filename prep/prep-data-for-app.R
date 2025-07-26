@@ -1,6 +1,7 @@
 library(tidyverse)
 library(haven)
 library(arrow)
+library(tidycensus)
 
 supply_data <- read_dta("prep/ccrc_cip_comp_aire_6dig.dta")
 
@@ -28,12 +29,14 @@ supply_data %>% arrow::write_parquet("prep/supply.parquet.gzip", compression = "
 supply_data <- read_parquet("prep/supply.parquet")
 
 demand_data <- read_csv("prep/lightcast-soc-year-county-2025-02-24 7_23pm.csv")
+
 demand_data %>% write_parquet(
   "prep/demand.parquet.gzip",
   compression = "gzip"
 )
 
 demand_data <- demand_data %>% 
+  filter(!is.na(COUNTY)) %>% 
   rename(countycd = COUNTY) %>% 
   left_join(sff, by = "countycd") %>% 
   left_join(cz_labels, by = "CZ") %>% 
@@ -53,6 +56,29 @@ demand_meta_data <- demand_meta_data %>%
 demand_data <- demand_data %>% 
   rename(soc = SOC_CODE) %>% 
   left_join(demand_meta_data)
+
+years <- 2010:2023
+
+county_pop_data <- map_dfr(
+  years,
+  ~ get_acs(
+    geography  = "county",
+    variables  = "B01003_001",
+    year       = .x,
+    survey     = "acs5",
+    cache_table= TRUE
+  ) |>
+    mutate(year = .x)
+)
+
+county_pop_ts <- county_pop_data %>% 
+  select(-moe) %>% 
+  select(COUNTY = GEOID, population_estimate = estimate, YEAR = year) %>% 
+  rename(countycd = COUNTY) %>% 
+  mutate(countycd = as.integer(countycd))
+
+demand_data <- demand_data %>%
+  left_join(county_pop_ts, by = c("countycd", "YEAR"))
 
 demand_data %>% 
   arrow::write_parquet("prep/demand.parquet.gzip", compression = "gzip")
