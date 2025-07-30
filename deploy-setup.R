@@ -25,6 +25,9 @@ file.copy("custom-style.css", "app/custom-style.css")
 # Core mapbox token file
 file.copy(".Renviron", "app/.Renviron")
 
+# other
+file.copy("airea-logo-draft.png", "app/airea-logo-draft.png")
+
 # ============================================================
 # Copy essential data files
 # ============================================================

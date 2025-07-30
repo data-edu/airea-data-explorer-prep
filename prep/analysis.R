@@ -11,8 +11,8 @@ library(sf)
 # ─────────────────────────────────────────────────────────────────────────────
 # 1. Read in your data
 # ─────────────────────────────────────────────────────────────────────────────
-onet <- read_dta("greenjobs4.dta")
-d   <- read_csv("lightcast-soc-year-county-2025-02-24 7_23pm.csv")
+onet <- read_dta("prep/greenjobs4.dta")
+d   <- read_csv("prep/lightcast-soc-year-county-2025-02-24 7_23pm.csv")
 
 # Mark green jobs
 d <- d %>%

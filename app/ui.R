@@ -51,7 +51,7 @@ navbarPage(
   
   title = 
     tags$div(
-      tags$h1(img(src = "airea-logo.png", height = "28px"),
+      tags$h1(img(src = "airea-logo-draft.png", height = "28px"),
               "Advanced Infrastructure, Energy, and Agriculture (AIREA) Data Explorer")
     ),
   

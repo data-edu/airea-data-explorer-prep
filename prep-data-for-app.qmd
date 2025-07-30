@@ -70,10 +70,13 @@ supply_data <- supply_data %>%
          tribal,
          rural,
          cip,
-         cip_title = cip2020title,
+         cip_title,
          county = countycd,
          total_completions = cmplt_tot,
          airea_completions = inst_aire_cmplt_tot)
+
+supply_data <- supply_data %>% 
+  mutate(cip_title = str_trim(cip_title))
 
 supply_data <- supply_data %>%
   mutate(county = as.integer(county)) %>% 
