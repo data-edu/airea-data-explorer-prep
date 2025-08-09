@@ -89,6 +89,53 @@ supply_data %>%
   arrow::write_parquet("prep/supply.parquet.gzip", compression = "gzip")
 ```
 
+
+## map tab supply
+```{r}
+map_supply_data <- read_dta("prep/ccrc_cip_comp_aire_6dig.dta")
+
+map_supply_data <- map_supply_data %>% 
+  select(instnm, inst_id = unitid,
+         latitude, longitud,
+         year, 
+         state = State,
+         county = countycd,
+         total_completions = cmplt_tot,
+         airea_completions = inst_aire_cmplt_tot)
+
+
+
+map_supply_data <- map_supply_data %>%
+  mutate(county = as.integer(county)) %>% 
+  left_join(county_cz_labels)
+
+map_supply_data <- map_supply_data %>% 
+  select(-CZ, -county)
+
+
+map_supply_summary <- map_supply_data %>%
+  group_by(year, inst_id, instnm) %>%   
+  summarise(
+    cz_label  = first(na.omit(cz_label)),
+    latitude  = first(na.omit(latitude)),
+    longitud  = first(na.omit(longitud)),
+    inst_cmplt_tot    = sum(total_completions, na.rm = TRUE),
+    airea_completions = sum(airea_completions, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    inst_perc_acea_tot = if_else(inst_cmplt_tot > 0,
+                                 airea_completions / inst_cmplt_tot,
+                                 NA_real_)
+  ) %>%
+  arrange(year, instnm)
+
+map_supply_summary %>% 
+  arrow::write_parquet("prep/mapsupply.parquet.gzip", compression = "gzip")
+
+```
+
+
 ## demand data
 
 ```{r}
@@ -181,3 +228,6 @@ demand_summed_by_cz <- lazy_dt(demand_data) %>%
 demand_summed_by_cz %>% 
   arrow::write_parquet("prep/demand.parquet.gzip", compression = "gzip")
 ```
+
+
+## map demand 
