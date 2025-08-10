@@ -308,9 +308,10 @@ function loadInstituteDataForYear(year) {
 
           const html = `
             <strong>${props.instnm}</strong><br>
-            ${props.CZ_label}<br>
-            AIREA Degrees: ${(+props.inst_green_cmplt_tot).toLocaleString()}<br>
-            Rate: ${(props.inst_perc_green_tot*100).toFixed(1)}%
+            Comuting Zone: ${props.CZ_label}<br>
+            AIREA Degree: ${(+props.inst_green_cmplt_tot).toLocaleString()}<br>
+            Total Degree: ${(+props.inst_cmplt_tot).toLocaleString()}<br>
+            % AIREA Degrees: ${(props.inst_perc_green_tot*100).toFixed(1)}%
           `;
 
           instHoverPopup

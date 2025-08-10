@@ -14,7 +14,7 @@ library(scales)
 
 supply <- readRDS("prep/supply-institutions-raw-data.rds")
 
-
+mapsupply <- readRDS("prep/mapsupply.rds")
 
 # ==============================================================================
 # Load demand data (job postings)
@@ -90,7 +90,7 @@ server <- function(input, output, session) {
     
     # Update institution dropdown for the selected year
     inst_choices <- sort(
-      unique(supply$instnm[supply$year == input$selected_year_map])
+      unique(mapsupply$instnm[mapsupply$year == input$selected_year_map])
     )
     
     updateSelectizeInput(
@@ -116,7 +116,7 @@ server <- function(input, output, session) {
     req(input$search_term)
     req(input$selected_year_map)
     
-    search_result <- supply %>%
+    search_result <- mapsupply %>%
       filter(
         grepl(input$search_term, instnm, ignore.case = TRUE),
         year == input$selected_year_map
@@ -126,6 +126,7 @@ server <- function(input, output, session) {
     if (nrow(search_result) > 0) {
       popup_text <- paste0(
         "<strong>", search_result$instnm, "</strong><br>",
+        "<strong>CZ:</strong> ", search_result$cz_label, "<br>",
         "<strong>Year:</strong> ", search_result$year, "<br>",
         "<strong>Total Completions:</strong> ",
         format(search_result$inst_cmplt_tot, big.mark = ",", scientific = FALSE), "<br>",
