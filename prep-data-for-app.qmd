@@ -131,6 +131,10 @@ map_supply_summary <- map_supply_data %>%
 map_supply_summary %>% 
   arrow::write_parquet("prep/mapsupply.parquet.gzip", compression = "gzip")
 
+mapsupply <- read_parquet("prep/mapsupply.parquet.gzip")
+## write mapsupply as rds
+saveRDS(mapsupply, "prep/mapsupply.rds")
+
 ```
 
 
