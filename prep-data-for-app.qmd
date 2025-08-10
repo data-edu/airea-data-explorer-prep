@@ -90,7 +90,7 @@ supply_data %>%
 ```
 
 
-## map tab supply
+## map tab supply data prep
 ```{r}
 map_supply_data <- read_dta("prep/ccrc_cip_comp_aire_6dig.dta")
 
@@ -102,8 +102,6 @@ map_supply_data <- map_supply_data %>%
          county = countycd,
          total_completions = cmplt_tot,
          airea_completions = inst_aire_cmplt_tot)
-
-
 
 map_supply_data <- map_supply_data %>%
   mutate(county = as.integer(county)) %>% 
@@ -230,4 +228,120 @@ demand_summed_by_cz %>%
 ```
 
 
-## map demand 
+## map demand data prep
+```{r}
+# End-to-end pipeline: demand_summed_by_cz → CZ-year metrics → align CZ20 & geometry → per-year GeoJSON
+library(dplyr)
+library(sf)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 0) Inputs expected in memory:
+#   - demand_summed_by_cz           : tibble with SOC-level postings by cz_label & year (<=2025)
+#   - county_cz_labels     : tibble/sf with at least: county (int FIPS), CZ (int), cz_label (chr)
+#   - county_pop_ts        : tibble with at least: GEOID (chr FIPS), year (int), estimate (num)
+#   - cz20                 : sf multipolygon with column CZ20 (int) + geometry
+# Output:
+#   - GeoJSON files: CZData_<year>.json (2010–2023)
+#     fields: CZ20, YEAR, total_postings, airea_job_posting, pop, pct_green, per1000, geometry
+# ─────────────────────────────────────────────────────────────────────────────
+
+# 1) Standardize county↔CZ mapping (drop geometry; unify key names/types)
+county_cz_labels_std <- county_cz_labels %>%
+  st_drop_geometry() %>%
+  transmute(
+    county   = as.integer(county),
+    CZ20     = as.integer(CZ),        # rename CZ → CZ20
+    cz_label = as.character(cz_label)
+  )
+
+# 2) Standardize county-year population (convert FIPS "01001" → 1001 as integer)
+county_pop_ts_std <- county_pop_ts %>%
+  transmute(
+    county = as.integer(GEOID),
+    year   = year,
+    population_estimate = estimate
+  )
+
+# 3) Population denominator for per1000:
+#    compute total population by CZ20 + year; keep only years <= 2023
+cz_pop_cz20_year <- county_pop_ts_std %>%
+  left_join(county_cz_labels_std %>% select(county, CZ20), by = "county") %>%
+  filter(!is.na(CZ20)) %>%
+  group_by(CZ20, year) %>%
+  summarise(cz_population = sum(population_estimate, na.rm = TRUE), .groups = "drop") %>%
+  filter(year <= 2023)
+
+# 4) Build a unique mapping cz_label → CZ20:
+#    For each label, pick the CZ20 with the largest cumulative population (2010–2023)
+cz_pop_by_cz20 <- county_pop_ts_std %>%
+  left_join(county_cz_labels_std, by = "county") %>%
+  filter(!is.na(CZ20), year <= 2023) %>%
+  group_by(CZ20, cz_label, year) %>%
+  summarise(cz_population = sum(population_estimate, na.rm = TRUE), .groups = "drop")
+
+cz_label_to_cz20_unique <- cz_pop_by_cz20 %>%
+  group_by(CZ20, cz_label) %>%
+  summarise(pop_total = sum(cz_population, na.rm = TRUE), .groups = "drop") %>%
+  filter(!is.na(cz_label)) %>%
+  group_by(cz_label) %>%
+  slice_max(order_by = pop_total, n = 1, with_ties = FALSE) %>%
+  ungroup() %>%
+  select(cz_label, CZ20)
+
+# 5) Aggregate postings to CZ-year from demand_summed_by_cz (exclude 2024–2025)
+cz_year <- demand_summed_by_cz %>%
+  filter(year <= 2023) %>%
+  group_by(cz_label, year) %>%
+  summarise(
+    total_postings    = sum(total_job_postings, na.rm = TRUE),
+    airea_job_posting = sum(total_job_postings[airea == 1], na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# 6) Bring in CZ20, then join population by CZ20+year; compute metrics
+cz_year_fixed <- cz_year %>%
+  left_join(cz_label_to_cz20_unique, by = "cz_label") %>%
+  filter(!is.na(CZ20)) %>%
+  select(-dplyr::any_of("pop")) %>%                                  # avoid name conflicts
+  left_join(cz_pop_cz20_year, by = c("CZ20", "year")) %>%
+  mutate(
+    pct_green = if_else(total_postings > 0,
+                        100 * airea_job_posting / total_postings, NA_real_),  # percentage (0–100)
+    per1000   = if_else(cz_population   > 0,
+                        1000 * total_postings / cz_population,    NA_real_)   # jobs per 1,000
+  ) %>%
+  rename(pop = cz_population)
+
+# (Optional) Quick QA
+# stopifnot(!any(duplicated(cz_year_fixed[, c("CZ20", "year")])))
+# summary(cz_year_fixed$pct_green); summary(cz_year_fixed$per1000)
+
+# 7) Join geometry and export one GeoJSON per year (what the front-end expects)
+cz20_clean <- cz20 %>%
+  st_transform(4326) %>%
+  st_make_valid() %>%
+  st_zm(drop = TRUE, what = "ZM")
+
+cz_sf_new <- cz20_clean %>%
+  select(CZ20, geometry) %>%
+  inner_join(cz_year_fixed, by = "CZ20") %>%
+  rename(YEAR = year) %>%
+  select(CZ20, YEAR,
+         total_postings, airea_job_posting, pop, pct_green, per1000,
+         geometry)
+
+years <- sort(unique(cz_sf_new$YEAR))
+for (y in years) {
+  st_write(
+    cz_sf_new %>% filter(YEAR == y),
+    paste0("CZData_", y, ".json"),
+    driver = "GeoJSON",
+    delete_dsn = TRUE
+  )
+}
+
+
+## NOTE: all the Json files should move to folder with mapbox.js (current project root: app/www)
+
+```
+
