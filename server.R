@@ -12,13 +12,19 @@ library(scales)
 # Load supply data (institution completions)
 # ==============================================================================
 
+## map supply data for tab 1 only(Don't delete, used in map)
+mapsupply <- readRDS("prep/mapsupply.rds")
+
+
+## supply for tab 2 to 4
 supply <- readRDS("prep/supply-institutions-raw-data.rds")
 
-mapsupply <- readRDS("prep/mapsupply.rds")
+
 
 # ==============================================================================
 # Load demand data (job postings)
 # ==============================================================================
+
 
 demand <- readRDS("prep/demand-jobs-raw-data.rds")
 
