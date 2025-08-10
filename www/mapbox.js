@@ -27,9 +27,9 @@ document.addEventListener("DOMContentLoaded", function () {
   // 2) "Color by" Helpers: Thresholds, Palettes, Labels
   // ──────────────────────────────────────────────────────────────────────────
   const czBreaks = {
-    airea_job_posting: [99, 499, 999, 4999],
-    pct_green:          [1,   5,    10,   20],
-    per1000:            [2,   5,    10,   20]
+    airea_job_posting: [1000, 5000, 20000, 50000],
+    pct_green:          [20, 25, 30, 35],
+    per1000:            [30,   50,    80,   120]
   };
   const czColors = {
     airea_job_posting: ["#edf8fb","#b2e2e2","#66c2a4","#2ca25f","#006d2c"],
