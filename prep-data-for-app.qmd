@@ -27,6 +27,7 @@ library(stringr)
 sff <- sf::read_sf("prep/CommutingZones2020_County_GIS_files/county20.shp") |>
   st_drop_geometry() |>
   as_tibble() |>
+  filter(!stringr::str_starts(as.character(GEOID), "02")) |>
   transmute(
     countycd = as.integer(GEOID),
     CZ       = CZ20
@@ -108,6 +109,7 @@ supply_data_tab <- read_dta("prep/ccrc_cip_comp_aire_6dig.dta")
 
 supply_data <- supply_data_tab %>% 
   select(instnm, inst_id = unitid,
+         aire_ind,
          year, 
          state = State,
          tribal,
@@ -115,6 +117,7 @@ supply_data <- supply_data_tab %>%
          cip,
          ciptitle,
          county = countycd,
+         award_level = awlevel,
          total_completions = cmplt_tot,
          airea_completions = aire_cmplt_tot,
          total_students_enrolled = eftotlt1,
