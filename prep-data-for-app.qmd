@@ -116,7 +116,9 @@ supply_data <- supply_data_tab %>%
          ciptitle,
          county = countycd,
          total_completions = cmplt_tot,
-         airea_completions = aire_cmplt_tot)
+         airea_completions = aire_cmplt_tot,
+         total_students_enrolled = eftotlt1,
+         total_ft_students_enrolled = eftotlt21)
 
 supply_data <- supply_data %>% 
   mutate(ciptitle = str_trim(ciptitle))

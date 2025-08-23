@@ -22,6 +22,13 @@ supply <- read_parquet("prep/supply.parquet.gzip")
 supply %>% 
   distinct()
 
+supply %>% 
+  select(institution = instnm,
+         cz_label,
+         total_completions, 
+         airea_completions,
+         )
+
 
 
 # ==============================================================================
