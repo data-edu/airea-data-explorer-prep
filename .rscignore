@@ -3,4 +3,7 @@ lightcast-soc-year-county-2025-02-24 7_23pm.csv
 supply-raw-data.rds
 demand-jobs-raw-data.rds
 prep/
+ccrc_cip_comp_aire_6dig.dta
+prep/ccrc_cip_comp_aire_6dig.dta
+/prep
 *.zip
