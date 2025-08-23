@@ -4,6 +4,7 @@
 
 library(shiny)
 library(dplyr)
+library(readr)
 library(tidyr)
 library(scales)
 library(arrow)
