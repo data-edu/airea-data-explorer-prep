@@ -23,6 +23,8 @@ supply_table <- supply %>%
          tribal) %>% 
   mutate(pct_airea_completions = mean_airea_completions/mean_completions)
 
+write_csv(supply_table, "prep/supply-table.csv")
+
 open_ds <- open_dataset("prep/supply_partitioned", format = "parquet")
 
 selected_instnm <- open_ds %>%
@@ -74,8 +76,6 @@ selected_instm_year %>%
   scale_fill_brewer("", palette = "Set1") +
   theme(legend.position = "top")
 
-demand_ds <- open_dataset("prep/demand_partitioned", format = "parquet")
-
 demand_tab <- arrow::read_parquet("prep/demand.parquet.gzip")
 
 cz_year <- demand_tab %>%
@@ -115,7 +115,10 @@ cz_table <- cz_summary %>%
     `CZ population`   = cz_population
   )
 
-cz_table
+cz_table %>% 
+  write_csv("prep/cz-summary-table.csv")
+
+demand_ds <- open_dataset("prep/demand_partitioned", format = "parquet")
 
 demand_selected_inst <- demand_ds %>%
   filter(cz_label == "Knoxville, TN") %>% 
@@ -143,12 +146,6 @@ demand_selected_inst %>%
     y = "AIREA job posts"
   ) +
   theme_minimal(base_size = 13)
-
-demand_ds %>%
-  filter(cz_label == "Knoxville, TN") %>% 
-  collect() %>% 
-  filter(year != 2025) %>% 
-  glimpse()
 
 plot_df <- demand_ds %>%
   filter(cz_label == "Knoxville, TN", year != 2025) %>%

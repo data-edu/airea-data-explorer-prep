@@ -101,7 +101,7 @@ county,CZ,cz_label
 41033,457,"Medford, OR"
 41045,129,"Boise, ID"
 41001,447,"La Grande, OR"
-41021,453,CZ 453
+41021,453,"Counties: Gilliam Co., OR, Wheeler Co., OR"
 42045,90,"Philadelphia, PA"
 42049,385,"Erie, PA"
 42059,463,"Pittsburgh, PA"
@@ -117,7 +117,7 @@ county,CZ,cz_label
 48273,499,"McAllen, TX"
 48391,499,"McAllen, TX"
 48201,501,"Houston, TX"
-48443,532,CZ 532
+48443,532,"County: Terrell Co., TX"
 48229,375,"El Paso, TX"
 48205,379,"Dumas, TX"
 48351,239,"Beaumont, TX & Lake Charles, LA"
@@ -206,10 +206,10 @@ county,CZ,cz_label
 30093,331,"Missoula, MT"
 30055,337,"Glasgow, MT & Wolf Point, MT"
 30059,326,"Bozeman, MT"
-30033,334,CZ 334
+30033,334,"County: Garfield Co., MT"
 31071,359,"Ord, NE"
 31115,359,"Ord, NE"
-31075,360,CZ 360
+31075,360,"County: Grant Co., NE"
 36053,384,"Syracuse, NY"
 36077,383,"Binghamton, NY"
 36051,390,"Rochester, NY"
@@ -420,7 +420,7 @@ county,CZ,cz_label
 29157,312,"Cape Girardeau, MO"
 30003,324,"Sheridan, WY"
 30053,333,"Kalispell, MT"
-30051,336,CZ 336
+30051,336,"County: Liberty Co., MT"
 30005,325,"Great Falls, MT"
 30083,342,"Williston, ND"
 30001,323,"Dillon, MT"
@@ -633,7 +633,7 @@ county,CZ,cz_label
 37083,397,"Roanoke Rapids, NC"
 37059,404,"Winston-Salem, NC"
 37199,400,"Asheville, NC"
-38005,410,CZ 410
+38005,410,"Counties: Benson Co., ND, Nelson Co., ND, Ramsey Co., ND"
 38003,409,"Valley City, ND"
 38059,412,"Bismarck, ND"
 38037,412,"Bismarck, ND"
@@ -928,7 +928,7 @@ county,CZ,cz_label
 37167,394,"Charlotte, NC"
 37193,404,"Winston-Salem, NC"
 37117,396,"Washington, NC"
-38071,410,CZ 410
+38071,410,"Counties: Benson Co., ND, Nelson Co., ND, Ramsey Co., ND"
 39127,428,"Columbus, OH"
 40117,440,"Tulsa, OK"
 41023,454,"John Day, OR"
@@ -1087,7 +1087,7 @@ county,CZ,cz_label
 37159,394,"Charlotte, NC"
 39021,424,"Dayton, OH"
 45005,471,"Hilton Head Island, SC & Aiken, SC & Bluffton, SC"
-46055,483,CZ 483
+46055,483,"Counties: Haakon Co., SD, Jackson Co., SD"
 48041,506,"College Station, TX"
 48053,502,"Austin, TX"
 48407,501,"Houston, TX"
@@ -1143,7 +1143,7 @@ county,CZ,cz_label
 22015,244,"Shreveport, LA"
 29033,315,"Chillicothe, MO"
 30077,331,"Missoula, MT"
-30069,339,CZ 339
+30069,339,"County: Petroleum Co., MT"
 37087,123,"Waynesville, NC"
 37121,400,"Asheville, NC"
 40101,433,"Muskogee, OK"
@@ -1449,7 +1449,7 @@ county,CZ,cz_label
 8089,78,"Colorado Springs, CO"
 24023,251,"Cumberland, MD"
 1021,5,"Birmingham, AL"
-25019,259,CZ 259
+25019,259,"County: Nantucket Co., MA"
 1103,10,"Huntsville, AL"
 26017,264,"Saginaw, MI"
 26151,272,"Detroit, MI"
@@ -2341,7 +2341,7 @@ county,CZ,cz_label
 20137,207,"Norton, KS"
 20013,199,"Falls City, NE"
 5063,52,"Batesville, AR"
-46071,483,CZ 483
+46071,483,"Counties: Haakon Co., SD, Jackson Co., SD"
 47177,492,"Cookeville, TN"
 47169,490,"Nashville, TN"
 29043,310,"Springfield, MO"
@@ -2480,7 +2480,7 @@ county,CZ,cz_label
 32021,361,"Reno, NV"
 33001,365,"Nashua, NH"
 40055,442,"Altus, OK"
-41069,453,CZ 453
+41069,453,"Counties: Gilliam Co., OR, Wheeler Co., OR"
 31055,190,"Omaha, NE"
 28125,300,"Greenville, MS"
 28159,302,"Starkville, MS & Columbus, MS"
@@ -2518,7 +2518,7 @@ county,CZ,cz_label
 46043,480,"Parkston, SD"
 46025,476,"Brookings, SD & Watertown, SD"
 46033,479,"Rapid City, SD"
-46063,484,CZ 484
+46063,484,"County: Harding Co., SD"
 28037,298,"McComb, MS & Brookhaven, MS"
 29179,321,"Farmington, MO"
 29151,309,"Columbia, MO"
@@ -2842,7 +2842,7 @@ county,CZ,cz_label
 39129,428,"Columbus, OH"
 72013,588,"Arecibo, PR"
 72125,591,"San Germán, PR & Mayagüez, PR"
-38063,410,CZ 410
+38063,410,"Counties: Benson Co., ND, Nelson Co., ND, Ramsey Co., ND"
 38045,413,"Lisbon, ND & Oakes, ND"
 38039,409,"Valley City, ND"
 38065,412,"Bismarck, ND"
@@ -3061,7 +3061,7 @@ county,CZ,cz_label
 17163,160,"St. Louis, MO"
 47171,489,"Johnson City, TN"
 48129,500,"Amarillo, TX"
-48345,529,CZ 529
+48345,529,"County: Motley Co., TX"
 51730,544,"Richmond, VA"
 47181,496,"Spring Hill, TN"
 49053,364,"St. George, UT"

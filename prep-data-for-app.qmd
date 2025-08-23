@@ -14,11 +14,14 @@ library(tidycensus)
 library(dtplyr)
 library(sf)
 library(stringr)
+library(tigris)
 ```
 
 ## *cz labels*
 
 ```{r}
+options(tigris_use_cache = TRUE)
+
 # --- Read CZ <-> county mapping (drop geometry) ---
 sff <- sf::read_sf("prep/CommutingZones2020_County_GIS_files/county20.shp") |>
   st_drop_geometry() |>
@@ -42,9 +45,8 @@ state_map <- tibble::tibble(
                    "AS",         "MP",                   "VI")
 )
 
-# thresholds (same semantics as your original)
-ratio_thresh <- 2      # top city must be >= 2x #2 to stand alone
-share_thresh <- 0.8    # others included if >= 80% of top
+ratio_thresh <- 2
+share_thresh <- 0.8
 
 # --- Attach CZ and state abbrev to each city ---
 city_cz <- city_data |>
@@ -52,8 +54,8 @@ city_cz <- city_data |>
   left_join(state_map, by = "state_name") |>
   mutate(city_st = if_else(is.na(state_abbrev), city, paste0(city, ", ", state_abbrev)))
 
-# --- Build a label per CZ ---
-cz_labels <- city_cz |>
+# --- CITY-BASED label per CZ ---
+cz_labels_city <- city_cz |>
   group_by(CZ) |>
   summarise(
     cz_label = {
@@ -69,21 +71,59 @@ cz_labels <- city_cz |>
     .groups = "drop"
   )
 
-# --- Ensure every CZ gets a non-missing label (fallback) ---
-all_cz <- sff |>
-  distinct(CZ)
-
-cz_labels <- all_cz |>
-  left_join(cz_labels, by = "CZ") |>
-  mutate(
-    cz_label = if_else(is.na(cz_label) | cz_label == "", paste0("CZ ", CZ), cz_label)
+# --- Get county names from tigris ---
+county_names <- tigris::counties(year = 2020, cb = TRUE) |>
+  st_drop_geometry() |>
+  transmute(
+    countycd = as.integer(GEOID),
+    county   = as.character(NAME),
+    statefp  = as.integer(STATEFP)
   )
 
-# --- Final dedup guard: if any labels still duplicate, suffix CZ to make unique ---
+state_lu <- tigris::fips_codes |>
+  distinct(state_code, state) |>
+  transmute(statefp = as.integer(state_code), state_abbrev = state)
+
+county_names <- county_names |>
+  left_join(state_lu, by = "statefp") |>
+  mutate(
+    county_clean = str_remove(county, " County$"),
+    county_st    = if_else(!is.na(state_abbrev),
+                           paste0(county_clean, " Co., ", state_abbrev),
+                           county_clean)
+  ) |>
+  select(countycd, county_st)
+
+# --- COUNTY-NAME fallback (singular/plural prefix) ---
+cz_labels_fallback <- sff |>
+  left_join(county_names, by = "countycd") |>
+  group_by(CZ) |>
+  summarise(
+    counties_named = paste(sort(unique(county_st)), collapse = ", "),
+    n_cty = n_distinct(county_st),
+    .groups = "drop"
+  ) |>
+  mutate(
+    cz_label_fallback = if_else(
+      n_cty == 1,
+      paste0("County: ", counties_named),
+      paste0("Counties: ", counties_named)
+    )
+  ) |>
+  select(CZ, cz_label_fallback)
+
+# --- Combine: prefer city label; else county-name fallback; else "CZ <code>" ---
+cz_labels <- sff |> distinct(CZ) |>
+  left_join(cz_labels_city,     by = "CZ") |>
+  left_join(cz_labels_fallback, by = "CZ") |>
+  mutate(
+    cz_label = dplyr::coalesce(cz_label, cz_label_fallback, paste0("CZ ", CZ))
+  ) |>
+  select(CZ, cz_label)
+
+# --- Deduplicate if necessary ---
 cz_labels <- cz_labels |>
-  group_by(cz_label) |>
-  mutate(n_dup = n()) |>
-  ungroup() |>
+  add_count(cz_label, name = "n_dup") |>
   mutate(
     cz_label = if_else(n_dup > 1, paste0(cz_label, " (CZ ", CZ, ")"), cz_label)
   ) |>
@@ -133,7 +173,7 @@ supply_data %>%
   mutate(year = as.integer(year)) %>%
   write_dataset("prep/supply_partitioned",
                 format = "parquet",
-                partitioning = c("instnm", "year"))
+                partitioning = c("instnm"))
 
 supply_data %>% 
   arrow::write_parquet("prep/supply.parquet.gzip", compression = "gzip")
@@ -279,7 +319,7 @@ demand_summed_by_cz <- demand_summed_by_cz %>%
 demand_summed_by_cz  %>%
   write_dataset("prep/demand_partitioned",
                 format = "parquet",
-                partitioning = c("cz_label", "year"))
+                partitioning = c("cz_label"))
 
 demand_summed_by_cz %>% 
   arrow::write_parquet("prep/demand.parquet.gzip", compression = "gzip")
