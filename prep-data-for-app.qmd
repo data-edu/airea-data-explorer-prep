@@ -4,7 +4,7 @@ format: html
 editor: visual
 ---
 
-## loading
+## *loading*
 
 ```{r}
 library(tidyverse)
@@ -13,16 +13,12 @@ library(arrow)
 library(tidycensus)
 library(dtplyr)
 library(sf)
+library(stringr)
 ```
 
-## cz labels
+## *cz labels*
 
 ```{r}
-library(sf)
-library(dplyr)
-library(readr)
-library(stringr)
-
 # --- Read CZ <-> county mapping (drop geometry) ---
 sff <- sf::read_sf("prep/CommutingZones2020_County_GIS_files/county20.shp") |>
   st_drop_geometry() |>
@@ -102,7 +98,7 @@ county_cz_labels <- sff |>
 write_csv(county_cz_labels, "county_cz_labels.csv")
 ```
 
-## supply
+## *supply*
 
 ```{r}
 supply_data_tab <- read_dta("prep/ccrc_cip_comp_aire_6dig.dta")
@@ -133,11 +129,17 @@ supply_data <- supply_data %>%
 supply_data <- supply_data %>% 
   select(-CZ, -county)
 
+supply_data %>%
+  mutate(year = as.integer(year)) %>%
+  write_dataset("prep/supply_partitioned",
+                format = "parquet",
+                partitioning = c("instnm", "year"))
+
 supply_data %>% 
   arrow::write_parquet("prep/supply.parquet.gzip", compression = "gzip")
 ```
 
-## map tab supply data prep
+## *map tab supply data prep*
 
 ```{r}
 map_supply_data <- supply_data_tab %>% 
@@ -182,7 +184,7 @@ mapsupply <- read_parquet("prep/mapsupply.parquet.gzip")
 saveRDS(mapsupply, "prep/mapsupply.rds")
 ```
 
-## demand data
+## *demand data*
 
 ```{r}
 demand_data <- read_csv("prep/lightcast-soc-year-county-2025-02-24 7_23pm.csv")
@@ -271,11 +273,19 @@ demand_summed_by_cz <- lazy_dt(demand_data) %>%
   as_tibble() %>% 
   filter(!is.na(cz_label))
 
+demand_summed_by_cz <- demand_summed_by_cz %>%
+  mutate(airea = ifelse(is.na(airea), 0, airea))
+
+demand_summed_by_cz  %>%
+  write_dataset("prep/demand_partitioned",
+                format = "parquet",
+                partitioning = c("cz_label", "year"))
+
 demand_summed_by_cz %>% 
   arrow::write_parquet("prep/demand.parquet.gzip", compression = "gzip")
 ```
 
-## map demand data prep
+## *map demand data prep*
 
 ```{r}
 # End-to-end pipeline: demand_summed_by_cz → CZ-year metrics → align CZ20 & geometry → per-year GeoJSON
