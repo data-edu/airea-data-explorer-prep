@@ -5,7 +5,7 @@
 library(dplyr)
 library(tidyr)
 library(scales)
-
+library(arrow)
 
 
 # ==============================================================================
@@ -16,8 +16,11 @@ library(scales)
 mapsupply <- readRDS("prep/mapsupply.rds")
 
 
-## supply for tab 2 to 4
-supply <- readRDS("prep/supply-institutions-raw-data.rds")
+## supply for tab 2 
+supply <- read_parquet("prep/supply.parquet.gzip")
+
+supply %>% 
+  distinct()
 
 
 
@@ -26,51 +29,7 @@ supply <- readRDS("prep/supply-institutions-raw-data.rds")
 # ==============================================================================
 
 
-demand <- readRDS("prep/demand-jobs-raw-data.rds")
-
-
-
-# ==============================================================================
-# Load SOC and CIP labels for treemaps (using new files)
-# ==============================================================================
-
-soc_labels <- NULL
-cip_labels <- NULL
-tryCatch({
-  library(haven)
-  # Use comprehensive file that has both SOC and CIP codes
-  comprehensive_labels <- read_dta("prep/camssoc&ciplist.dta")
-  
-  # Extract unique SOC codes and titles
-  soc_labels <- comprehensive_labels %>%
-    select(soc, soc2018title) %>%
-    distinct() %>%
-    filter(!is.na(soc), !is.na(soc2018title))
-  
-  # Extract unique CIP codes and titles  
-  cip_labels <- comprehensive_labels %>%
-    select(cip, cip2020title) %>%
-    distinct() %>%
-    filter(!is.na(cip), !is.na(cip2020title)) %>%
-    mutate(
-      # Convert CIP codes from "01.0000" format to numeric format
-      cip_numeric = as.numeric(gsub("\\.", "", cip))
-    ) %>%
-    select(cip_numeric, cip2020title) %>%
-    rename(cip = cip_numeric)
-    
-}, error = function(e) {
-  print("Could not load label files, using simple labels")
-})
-
-# Load scatter plot data
-scatter_data <- NULL
-tryCatch({
-  scatter_data <- readRDS("scatter_plot_data.rds")
-}, error = function(e) {
-  print("Could not load scatter plot data")
-})
-
+demand <- read_parquet("prep/demand.parquet.gzip")
 
 
 # ==============================================================================
@@ -171,11 +130,11 @@ server <- function(input, output, session) {
     supply %>% 
       group_by(instnm) %>%
       summarise(
-        `Total Completions` = sum(inst_cmplt_tot, na.rm = TRUE),
-        `AIREA Completions` = sum(mfreq_acea_cip_cmplt1, na.rm = TRUE),
-        `AIREA Percentage` = sum(mfreq_acea_cip_cmplt1, na.rm = TRUE) / sum(inst_cmplt_tot, na.rm = TRUE),
+        `Total Completions` = sum(total_completions, na.rm = TRUE),
+        `AIREA Completions` = sum(airea_completions, na.rm = TRUE),
         .groups = "drop"
-      ) %>% 
+      ) %>%
+      mutate(`AIREA Percentage` = ifelse(`Total Completions` > 0, `AIREA Completions` / `Total Completions`, NA_real_)) %>% 
       arrange(desc(`Total Completions`))
   })
   
@@ -221,8 +180,15 @@ server <- function(input, output, session) {
     
     # Create time series plot showing AIREA percentage
     supply %>% 
-      filter(instnm == my_inst$instnm) %>% 
-      ggplot(aes(x = year, y = inst_perc_acea_tot * 100)) +
+      filter(instnm == my_inst$instnm) %>%
+      group_by(year) %>%
+      summarise(
+        total_completions = sum(total_completions, na.rm = TRUE),
+        airea_completions = sum(airea_completions, na.rm = TRUE),
+        .groups = "drop"
+      ) %>%
+      mutate(airea_pct = ifelse(total_completions > 0, airea_completions / total_completions * 100, NA_real_)) %>%
+      ggplot(aes(x = year, y = airea_pct)) +
       geom_point(color = "#31a2b6", size = 3) +
       geom_line(color = "#31a2b6", linewidth = 1) +
       theme_minimal() +
@@ -242,56 +208,61 @@ server <- function(input, output, session) {
     my_inst <- selected_institution()
     
     # Use the most recent year for the institution
-    inst_data <- supply %>%
+    most_recent_year <- supply %>%
       filter(instnm == my_inst$instnm) %>%
-      arrange(desc(year)) %>%
-      slice(1)
+      summarise(max_year = max(year, na.rm = TRUE)) %>%
+      pull(max_year)
 
-    # Extract completions, percentages, and actual CIP codes for the 5 CIPs
-    treemap_data <- data.frame(
-      CIP_Code = as.numeric(inst_data[1, paste0("mfreq_acea_cip", 1:5)]),
-      CIP_Completions = as.numeric(inst_data[1, paste0("mfreq_acea_cip_cmplt", 1:5)]),
-      CIP_Percentage = as.numeric(inst_data[1, paste0("mfreq_acea_cip", 1:5, "_pct")])
-    ) %>%
-      filter(!is.na(CIP_Completions), CIP_Completions > 0, !is.na(CIP_Code), CIP_Code != "") %>%
+    # Build treemap data: AIREA completions by CIP for that year
+    treemap_data <- supply %>%
+      filter(instnm == my_inst$instnm, year == most_recent_year) %>%
+      group_by(cip, cip_title) %>%
+      summarise(
+        CIP_Completions = sum(airea_completions, na.rm = TRUE),
+        .groups = "drop"
+      ) %>%
+      filter(!is.na(CIP_Completions), CIP_Completions > 0) %>%
+      arrange(desc(CIP_Completions))
+
+    total_airea_inst_year <- sum(treemap_data$CIP_Completions, na.rm = TRUE)
+
+    treemap_data <- treemap_data %>%
       mutate(
-        CIP_Percentage = CIP_Percentage * 100
+        CIP_Code = cip,
+        CIP_Label = ifelse(!is.na(cip_title) & cip_title != "",
+                            paste0("CIP ", cip, ": ", cip_title),
+                            paste0("CIP ", cip)),
+        CIP_Percentage = ifelse(total_airea_inst_year > 0,
+                                (CIP_Completions / total_airea_inst_year) * 100,
+                                NA_real_)
       )
 
     # Get top 5 and calculate "Other"
     top_5_data <- treemap_data %>% head(5)
-    other_completions <- treemap_data %>% slice(6:n()) %>% summarise(CIP_Completions = sum(CIP_Completions, na.rm = TRUE)) %>% pull(CIP_Completions)
-    other_percentage <- treemap_data %>% slice(6:n()) %>% summarise(CIP_Percentage = sum(CIP_Percentage, na.rm = TRUE)) %>% pull(CIP_Percentage)
+    if (nrow(treemap_data) > 5) {
+      other_completions <- treemap_data %>% slice(6:n()) %>% summarise(CIP_Completions = sum(CIP_Completions, na.rm = TRUE)) %>% pull(CIP_Completions)
+      other_percentage <- ifelse(total_airea_inst_year > 0, (other_completions / total_airea_inst_year) * 100, NA_real_)
+    } else {
+      other_completions <- 0
+      other_percentage <- 0
+    }
     
     # Add "Other" row if there are additional CIPs
     if (other_completions > 0) {
       other_row <- data.frame(
-        CIP_Code = 999999,  # Use a dummy code for "Other"
+        CIP_Code = "Other",
         CIP_Completions = other_completions,
-        CIP_Percentage = other_percentage
+        CIP_Percentage = other_percentage,
+        CIP_Label = "Other AIREA CIPs"
       )
-      treemap_data <- rbind(top_5_data, other_row)
+      treemap_data <- bind_rows(top_5_data, other_row)
     } else {
       treemap_data <- top_5_data
     }
 
-    # Join with CIP labels to get proper titles
-    if (!is.null(cip_labels) && nrow(cip_labels) > 0) {
-      treemap_data <- treemap_data %>%
-        left_join(cip_labels %>% select(cip, cip2020title), by = c("CIP_Code" = "cip")) %>%
-        mutate(
-          CIP_Label = ifelse(CIP_Code == 999999, 
-                            "Other AIREA CIPs",
-                            ifelse(!is.na(cip2020title), 
-                                   paste0("CIP ", CIP_Code, ": ", cip2020title),
-                                   paste0("CIP ", CIP_Code)))
-        )
-    } else {
-      treemap_data <- treemap_data %>%
-        mutate(CIP_Label = ifelse(CIP_Code == 999999, 
-                                 "Other AIREA CIPs",
-                                 paste0("CIP ", CIP_Code)))
-    }
+    # Labels already constructed from `cip_title`; ensure 'Other' label is set
+    treemap_data <- treemap_data %>%
+      mutate(CIP_Label = ifelse(CIP_Code == "Other", "Other AIREA CIPs", CIP_Label))
 
     if (nrow(treemap_data) == 0) {
       plot_ly(
@@ -302,7 +273,7 @@ server <- function(input, output, session) {
         textfont = list(size = 14, color = "white")  # Balanced font size for readability
       ) %>%
         layout(
-          title = paste("Top 5 AIREA CIPs for", my_inst$instnm, "-", inst_data$year),
+          title = paste("Top 5 AIREA CIPs for", my_inst$instnm, "-", most_recent_year),
           margin = list(t = 50, l = 25, r = 25, b = 25)
         )
     } else {
@@ -324,7 +295,7 @@ server <- function(input, output, session) {
         customdata = ~CIP_Percentage
       ) %>%
         layout(
-          title = paste("Top 5 AIREA CIPs for", my_inst$instnm, "-", inst_data$year),
+          title = paste("Top 5 AIREA CIPs for", my_inst$instnm, "-", most_recent_year),
           margin = list(t = 50, l = 25, r = 25, b = 25)
         )
     }
@@ -505,104 +476,5 @@ server <- function(input, output, session) {
         title = paste("Top 5 AIREA SOCs for", gsub("^[0-9]+ ", "", gsub(" CZ$", "", my_cz$CZ_label)), "(All Years through 2024)"),
         margin = list(t = 50, l = 25, r = 25, b = 25)
       )
-  })
-  
-  
-  
-  # ============================================================================
-  # Panel 4: Supply vs Demand
-  # ============================================================================
-  
-  # Scatter plot
-  output$scatter_plot <- renderPlotly({
-    req(scatter_data)
-    
-    p <- scatter_data %>%
-      ggplot(aes(x = airea_posting_percentage, y = airea_completion_percentage)) +
-      geom_point(aes(size = total_completions, 
-                     color = size_category,
-                     text = paste0(
-                       "<b>", gsub("^[0-9]+ ", "", gsub(" CZ$", "", CZ_label)), "</b><br>",
-                       "AIREA Supply: ", sprintf("%.1f%%", airea_completion_percentage), "<br>",
-                       "AIREA Demand: ", sprintf("%.1f%%", airea_posting_percentage), "<br>",
-                       "Total Completions: ", format(total_completions, big.mark = ","), "<br>",
-                       "Institutions: ", num_institutions
-                     )), 
-                 alpha = 0.7) +
-      geom_smooth(method = "lm", se = TRUE, color = "#864f83", alpha = 0.3) +
-      theme_minimal() +
-      labs(
-        title = "AIREA Supply vs Demand by Commuting Zone",
-        x = "AIREA Demand (% of Job Posts)",
-        y = "AIREA Supply (% of Completions)",
-        size = "Total Completions",
-        color = "CZ Size"
-      ) +
-      scale_size_continuous(range = c(2, 12), guide = "none") +
-      scale_color_manual(values = c("Small (< 1,000)" = "#ff7f0e", 
-                                   "Medium (1,000 - 5,000)" = "#31a2b6", 
-                                   "Large (> 5,000)" = "#5ca060")) +
-      theme(legend.position = "bottom")
-    
-    ggplotly(p, tooltip = "text") %>%
-      layout(
-        title = list(text = "AIREA Supply vs Demand by Commuting Zone", 
-                     font = list(size = 16)),
-        margin = list(t = 50, l = 50, r = 50, b = 100)
-      )
-  })
-  
-  # Raw counts scatter plot
-  output$scatter_plot_counts <- renderPlotly({
-    req(scatter_data)
-    
-    p <- scatter_data %>%
-      ggplot(aes(x = total_airea_posts, y = total_airea_completions)) +
-      geom_point(aes(size = total_completions, 
-                     color = size_category,
-                     text = paste0(
-                       "<b>", gsub("^[0-9]+ ", "", gsub(" CZ$", "", CZ_label)), "</b><br>",
-                       "AIREA Completions: ", format(total_airea_completions, big.mark = ","), "<br>",
-                       "AIREA Job Posts: ", format(total_airea_posts, big.mark = ","), "<br>",
-                       "Total Completions: ", format(total_completions, big.mark = ","), "<br>",
-                       "Institutions: ", num_institutions
-                     )), 
-                  alpha = 0.7) +
-      geom_smooth(method = "lm", se = TRUE, color = "#864f83", alpha = 0.3) +
-      theme_minimal() +
-      labs(
-        title = "AIREA Raw Counts: Completions vs Job Postings by Commuting Zone",
-        x = "AIREA Job Posts (Total Count)",
-        y = "AIREA Completions (Total Count)",
-        size = "Total Completions",
-        color = "CZ Size"
-      ) +
-      scale_size_continuous(range = c(2, 12), guide = "none") +
-      scale_color_manual(values = c("Small (< 1,000)" = "#ff7f0e", 
-                                    "Medium (1,000 - 5,000)" = "#31a2b6", 
-                                    "Large (> 5,000)" = "#5ca060")) +
-      scale_x_continuous(labels = scales::comma) +
-      scale_y_continuous(labels = scales::comma) +
-      theme(legend.position = "bottom")
-    
-    ggplotly(p, tooltip = "text") %>%
-      layout(
-        title = list(text = "AIREA Raw Counts: Completions vs Job Postings by Commuting Zone", 
-                     font = list(size = 16)),
-        margin = list(t = 50, l = 50, r = 50, b = 100)
-      )
-  })
-  
-  # ============================================================
-  # LEGACY CODE (keeping for compatibility)
-  # ============================================================
-  
-  # Load treemap list for legacy functionality
-  treemap_list <- readRDS("Green_degree_treemap_plotly_list.rds")
-  
-  output$treemapPlot <- renderPlotly({
-    # Use the most recent year as default
-    default_year <- max(supply$year, na.rm = TRUE)
-    treemap_list[[ as.character(default_year) ]]
   })
 }

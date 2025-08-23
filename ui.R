@@ -9,19 +9,6 @@ source("mapboxtoken_setup.R")  # Loads Mapbox_token used for Mapbox access
 
 
 # ==============================================================================
-# Load Demand Data: Commuting Zone Job Postings
-# ==============================================================================
-
-# Read the Commuting Zone (CZ) job postings data. This RDS file should contain fields:
-# - CZ20: Commuting zone identifier
-# - YEAR: Year of the data
-# - green_job_postings: Number of green job postings in that CZ
-# - geometry: Spatial information for mapping
-CZ_job_post <- readRDS("CZ_job_post.rds")
-
-
-
-# ==============================================================================
 # Launch the Shiny app and Navigation Bar
 # ==============================================================================
 
@@ -127,8 +114,8 @@ navbarPage(
                          
                          selectInput("selected_year_map",
                                      tags$div(style = "margin-top: 15px;", tags$h3("Select Year:")),
-                                     choices = sort(unique(CZ_job_post$YEAR), decreasing = TRUE),
-                                     selected = max(CZ_job_post$YEAR)
+                                     choices = c(2010:2023, decreasing = TRUE),
+                                     selected = 2023
                          ),
                          selectInput("cz_metric", 
                                      tags$h3("Color by:"), 
@@ -271,44 +258,5 @@ navbarPage(
                     plotlyOutput("demand_treemap", height = "500px")
              )
            )
-  ),
-  
-  
-  
-  
-  
-  # ============================================================================
-  # Panel 4: Supply vs Demand
-  # ============================================================================
-  
-  tabPanel("Supply vs Demand", value = "scatter",
-           
-           tags$h2("AIREA Supply vs Demand by Commuting Zone"),
-           
-           fluidRow(
-             column(12,
-                    tags$div(
-                      style = "background-color: #dff3f6; padding: 15px; border-radius: 5px; margin-bottom: 15px;",
-                      tags$p(icon("info-circle"),
-                             "This scatter plot compares AIREA supply (% of completions from community colleges) vs AIREA demand (% of job postings) at the commuting zone level. Each point represents a commuting zone, with size indicating total completions.")),
-                    plotlyOutput("scatter_plot", height = "600px")
-             )
-           ),
-           
-           tags$hr(),
-           
-           # Second scatter plot for raw counts
-           tags$h2("AIREA Raw Counts by Commuting Zone"),
-           fluidRow(
-             column(12,
-                    tags$div(
-                      style = "background-color: #dff3f6; padding: 15px; border-radius: 5px; margin-bottom: 15px;",
-                      tags$p(icon("info-circle"),
-                             "This scatter plot shows the absolute numbers of AIREA completions vs AIREA job postings by commuting zone.")),
-                    plotlyOutput("scatter_plot_counts", height = "600px")
-             )
-           )
   )
-  
-  
 )
