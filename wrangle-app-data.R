@@ -4,23 +4,40 @@ library(arrow)
 library(scales)
 
 supply <- read_parquet("prep/supply.parquet.gzip")
+
+supply_nat_ave <- supply %>% 
+  group_by(instnm, year) %>% 
+  summarize(tot_completions = sum(total_completions, na.rm = TRUE),
+            tot_airea_completions = sum(airea_completions, na.rm = TRUE),
+            first_students_enrolled = first(total_students_enrolled)) %>% 
+  group_by(year) %>%
+  summarize(mean_completions = mean(tot_completions, na.rm = TRUE),
+            mean_airea_completions = mean(tot_airea_completions, na.rm = TRUE),
+            mean_students_enrolled = mean(first_students_enrolled, na.rm = TRUE)) %>% 
+  mutate(
+    pct_airea_completions = mean_airea_completions / mean_completions
+  ) %>% 
+  select(year, mean_airea_completions, pct_airea_completions)
+
+write_csv(supply_nat_ave, "prep/supply-nat-ave.csv")
+
 soc <- read_dta("prep/full_soc.dta")
 
-supply_table <- supply %>% 
-  group_by(instnm) %>% 
-  summarize(mean_completions = mean(total_completions, na.rm = TRUE),
-            mean_airea_completions = mean(airea_completions, na.rm = TRUE),
-            mean_students_enrolled = mean(total_students_enrolled, na.rm = TRUE),
+supply %>% 
+  group_by(instnm, year) %>% 
+  summarize(tot_completions = sum(total_completions, na.rm = TRUE),
+            tot_airea_completions = sum(airea_completions, na.rm = TRUE),
+            first_students_enrolled = first(total_students_enrolled),
             rural = first(rural),
             tribal = first(tribal),
             cz_label = first(cz_label)) %>% 
-  select(institution = instnm,
-         cz_label,
-         mean_completions, 
-         mean_airea_completions,
-         mean_students_enrolled,
-         rural,
-         tribal) %>% 
+  group_by(instnm) %>%
+  summarize(mean_completions = mean(tot_completions, na.rm = TRUE),
+            mean_airea_completions = mean(tot_airea_completions, na.rm = TRUE),
+            mean_students_enrolled = mean(first_students_enrolled, na.rm = TRUE),
+            rural = first(rural),
+            tribal = first(tribal),
+            cz_label = first(cz_label)) %>% 
   mutate(pct_airea_completions = mean_airea_completions/mean_completions)
 
 write_csv(supply_table, "prep/supply-table.csv")
@@ -89,6 +106,20 @@ cz_year <- demand_tab %>%
     cz_pop_year = mean(mean_population, na.rm = TRUE),
     .groups = "drop"
   )
+
+cz_year
+
+cz_year %>% 
+  group_by(year) %>% 
+  summarize(
+    mean_job_posts = mean(posts_total, na.rm = TRUE),
+    mean_airea_posts = mean(posts_airea, na.rm = TRUE),
+    pct_airea_posts = if_else(mean_job_posts > 0,
+                          mean_airea_posts / mean_job_posts, NA_real_),
+    mean_pop_year = mean(cz_pop_year, na.rm = TRUE),
+    posts_per_1000 = if_else(mean_pop_year > 0,
+                              (mean_job_posts / mean_pop_year) * 1000, NA_real_)
+  ) %>% write_csv("demand-nat-ave.csv")
 
 cz_summary <- cz_year %>%
   group_by(cz_label) %>%

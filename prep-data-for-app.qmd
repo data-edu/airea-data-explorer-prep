@@ -260,7 +260,7 @@ demand_data <- demand_data %>%
   rename(soc = SOC_CODE) %>% 
   left_join(demand_meta_data)
 
-years <- 2010:2023
+years <- 2010:2024
 
 county_pop_data <- map_dfr(
   years,
