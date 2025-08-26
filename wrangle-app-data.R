@@ -5,16 +5,6 @@ library(scales)
 
 supply <- read_parquet("prep/supply.parquet.gzip")
 
-supply %>% filter(str_detect(instnm, "Ivy")) %>% View()
-
-supply %>% janitor::tabyl(award_level)
-
-supply %>% 
-  filter(str_detect(instnm, "Sowela")) 
-
-supply %>% 
-  filter(str_detect(instnm, "SOWELA")) %>% View()
-
 supply_nat_ave <- supply %>% 
   group_by(instnm, year) %>% 
   summarize(tot_completions = sum(total_completions, na.rm = TRUE),
@@ -33,7 +23,7 @@ write_csv(supply_nat_ave, "prep/supply-nat-ave.csv")
 
 soc <- read_dta("prep/full_soc.dta")
 
-supply %>% 
+supply_table <- supply %>% 
   group_by(instnm, year) %>% 
   summarize(tot_completions = sum(total_completions, na.rm = TRUE),
             tot_airea_completions = sum(airea_completions, na.rm = TRUE),
@@ -53,10 +43,6 @@ supply %>%
 write_csv(supply_table, "prep/supply-table.csv")
 
 open_ds <- open_dataset("prep/supply_partitioned", format = "parquet")
-
-selected_instnm <- open_ds %>%
-  filter(instnm == "Santa Barbara City College") %>% 
-  collect()
 
 selected_instnm %>% 
   group_by(year) %>% 
@@ -129,7 +115,8 @@ cz_year %>%
     mean_pop_year = mean(cz_pop_year, na.rm = TRUE),
     posts_per_1000 = if_else(mean_pop_year > 0,
                               (mean_job_posts / mean_pop_year) * 1000, NA_real_)
-  ) %>% write_csv("demand-nat-ave.csv")
+  ) %>% 
+  write_csv("prep/demand-nat-ave.csv")
 
 cz_summary <- cz_year %>%
   group_by(cz_label) %>%

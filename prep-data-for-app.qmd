@@ -168,16 +168,15 @@ supply_data_tab <- supply_data_tab %>%
   mutate(instnm = instnm_latest) %>%
   select(-instnm_latest)
 
-supply_data_tab
-
 supply_data_tab %>%
   distinct(unitid, instnm) %>%
   count(unitid) %>% 
   arrange(desc(n)) %>% 
-  filter(n > 1) # 0
+  filter(n > 1) # 128!
 
 supply_data <- supply_data_tab %>% 
-  select(instnm, inst_id = unitid,
+  select(instnm,
+         unitid,
          aire_ind,
          year, 
          state = State,
@@ -310,7 +309,7 @@ demand_data <- demand_data %>%
 
 # write_rds(county_pop_data, "county-pop-data.rds")
 
-county_pop_data <- read_rds("county-pop-data.rds")
+county_pop_data <- read_rds("prep/county-pop-data.rds")
 
 county_pop_ts <- county_pop_data %>% 
   select(-moe) %>% 
