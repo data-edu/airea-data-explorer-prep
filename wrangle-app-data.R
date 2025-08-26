@@ -5,6 +5,16 @@ library(scales)
 
 supply <- read_parquet("prep/supply.parquet.gzip")
 
+supply %>% filter(str_detect(instnm, "Ivy")) %>% View()
+
+supply %>% janitor::tabyl(award_level)
+
+supply %>% 
+  filter(str_detect(instnm, "Sowela")) 
+
+supply %>% 
+  filter(str_detect(instnm, "SOWELA")) %>% View()
+
 supply_nat_ave <- supply %>% 
   group_by(instnm, year) %>% 
   summarize(tot_completions = sum(total_completions, na.rm = TRUE),
@@ -68,7 +78,7 @@ selected_instnm %>%
 
 
 selected_instm_year <- open_ds %>%
-  filter(instnm == "Santa Barbara City College", year == 2012L) %>% 
+  filter(instnm == "", year == 2012L) %>% 
   collect()
 
 selected_instm_year %>% 

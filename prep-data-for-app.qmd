@@ -26,7 +26,7 @@ options(tigris_use_cache = TRUE)
 sff <- sf::read_sf("prep/CommutingZones2020_County_GIS_files/county20.shp") |>
   st_drop_geometry() |>
   as_tibble() |>
-  filter(!stringr::str_starts(as.character(GEOID), "02")) |>
+  filter(!stringr::str_starts(as.character(GEOID), "02")) |> # gets rid of AK
   transmute(
     countycd = as.integer(GEOID),
     CZ       = CZ20
@@ -143,6 +143,39 @@ write_csv(county_cz_labels, "county_cz_labels.csv")
 ```{r}
 supply_data_tab <- read_dta("prep/ccrc_cip_comp_aire_6dig.dta")
 
+supply_data_tab %>%
+  distinct(unitid, instnm) %>%
+  count(unitid) %>% 
+  arrange(desc(n)) %>% 
+  filter(n > 1) # 128!
+
+# rename
+latest_by_unit <- supply_data_tab %>%
+  group_by(unitid) %>%
+  summarize(latest_year = max(year, na.rm = TRUE), .groups = "drop")
+
+latest_name <- supply_data_tab %>%
+  inner_join(latest_by_unit, by = "unitid") %>%
+  filter(year == latest_year) %>%
+  count(unitid, instnm, sort = TRUE) %>%
+  group_by(unitid) %>%
+  slice_max(order_by = n, n = 1, with_ties = FALSE) %>%
+  ungroup() %>%
+  select(unitid, instnm_latest = instnm)
+
+supply_data_tab <- supply_data_tab %>%
+  left_join(latest_name, by = "unitid") %>%
+  mutate(instnm = instnm_latest) %>%
+  select(-instnm_latest)
+
+supply_data_tab
+
+supply_data_tab %>%
+  distinct(unitid, instnm) %>%
+  count(unitid) %>% 
+  arrange(desc(n)) %>% 
+  filter(n > 1) # 0
+
 supply_data <- supply_data_tab %>% 
   select(instnm, inst_id = unitid,
          aire_ind,
@@ -157,7 +190,8 @@ supply_data <- supply_data_tab %>%
          total_completions = cmplt_tot,
          airea_completions = aire_cmplt_tot,
          total_students_enrolled = eftotlt1,
-         total_ft_students_enrolled = eftotlt21)
+         total_ft_students_enrolled = eftotlt21,
+         webaddr)
 
 supply_data <- supply_data %>% 
   mutate(ciptitle = str_trim(ciptitle))
@@ -260,19 +294,23 @@ demand_data <- demand_data %>%
   rename(soc = SOC_CODE) %>% 
   left_join(demand_meta_data)
 
-years <- 2010:2024
+# years <- 2010:2023
+# 
+# county_pop_data <- map_dfr(
+#  years,
+#  ~ get_acs(
+#    geography  = "county",
+#    variables  = "B01003_001",
+#    year       = .x,
+#     survey     = "acs5",
+#     cache_table= TRUE
+#   ) |>
+#     mutate(year = .x)
+# )
 
-county_pop_data <- map_dfr(
-  years,
-  ~ get_acs(
-    geography  = "county",
-    variables  = "B01003_001",
-    year       = .x,
-    survey     = "acs5",
-    cache_table= TRUE
-  ) |>
-    mutate(year = .x)
-)
+# write_rds(county_pop_data, "county-pop-data.rds")
+
+county_pop_data <- read_rds("county-pop-data.rds")
 
 county_pop_ts <- county_pop_data %>% 
   select(-moe) %>% 
