@@ -1,0 +1,411 @@
+# prep-data-for-maptab
+
+## *loading*
+
+```{r}
+library(tidyverse)
+library(haven)
+library(arrow)
+library(tidycensus)
+library(dtplyr)
+library(sf)
+library(stringr)
+library(tigris)
+```
+
+## *cz labels*
+
+```{r}
+options(tigris_use_cache = TRUE)
+
+# --- Read CZ <-> county mapping (drop geometry) ---
+sff <- sf::read_sf("prep/CommutingZones2020_County_GIS_files/county20.shp") |>
+  st_drop_geometry() |>
+  as_tibble() |>
+  filter(!stringr::str_starts(as.character(GEOID), "02")) |> # gets rid of AK
+  transmute(
+    countycd = as.integer(GEOID),
+    CZ       = CZ20
+  )
+
+# --- Cities (≥ 1,000 pop), keep all (not only top per county) ---
+city_data <- read_csv("prep/us_cities_over_1000_with_county_fips.csv") |>
+  mutate(countycd = as.integer(county_fips)) |>
+  select(city, state_name, countycd, population)
+
+# --- State name -> postal abbreviation (add DC + territories as needed) ---
+state_map <- tibble::tibble(
+  state_name   = c(state.name, "District of Columbia", "Puerto Rico", "Guam",
+                   "American Samoa", "Northern Mariana Islands", "U.S. Virgin Islands"),
+  state_abbrev = c(state.abb,   "DC",                    "PR",         "GU",
+                   "AS",         "MP",                   "VI")
+)
+
+ratio_thresh <- 2
+share_thresh <- 0.8
+
+# --- Attach CZ and state abbrev to each city ---
+city_cz <- city_data |>
+  inner_join(sff, by = "countycd") |>
+  left_join(state_map, by = "state_name") |>
+  mutate(city_st = if_else(is.na(state_abbrev), city, paste0(city, ", ", state_abbrev)))
+
+# --- CITY-BASED label per CZ ---
+cz_labels_city <- city_cz |>
+  group_by(CZ) |>
+  summarise(
+    cz_label = {
+      df <- arrange(cur_data_all(), desc(population))
+      if (nrow(df) == 0) {
+        NA_character_
+      } else if (nrow(df) >= 2 && df$population[1] >= ratio_thresh * df$population[2]) {
+        df$city_st[1]
+      } else {
+        paste(df$city_st[df$population >= share_thresh * df$population[1]], collapse = " & ")
+      }
+    },
+    .groups = "drop"
+  )
+
+# --- Get county names from tigris ---
+county_names <- tigris::counties(year = 2020, cb = TRUE) |>
+  st_drop_geometry() |>
+  transmute(
+    countycd = as.integer(GEOID),
+    county   = as.character(NAME),
+    statefp  = as.integer(STATEFP)
+  )
+
+state_lu <- tigris::fips_codes |>
+  distinct(state_code, state) |>
+  transmute(statefp = as.integer(state_code), state_abbrev = state)
+
+county_names <- county_names |>
+  left_join(state_lu, by = "statefp") |>
+  mutate(
+    county_clean = str_remove(county, " County$"),
+    county_st    = if_else(!is.na(state_abbrev),
+                           paste0(county_clean, " Co., ", state_abbrev),
+                           county_clean)
+  ) |>
+  select(countycd, county_st)
+
+# --- COUNTY-NAME fallback (singular/plural prefix) ---
+cz_labels_fallback <- sff |>
+  left_join(county_names, by = "countycd") |>
+  group_by(CZ) |>
+  summarise(
+    counties_named = paste(sort(unique(county_st)), collapse = ", "),
+    n_cty = n_distinct(county_st),
+    .groups = "drop"
+  ) |>
+  mutate(
+    cz_label_fallback = if_else(
+      n_cty == 1,
+      paste0("County: ", counties_named),
+      paste0("Counties: ", counties_named)
+    )
+  ) |>
+  select(CZ, cz_label_fallback)
+
+# --- Combine: prefer city label; else county-name fallback; else "CZ <code>" ---
+cz_labels <- sff |> distinct(CZ) |>
+  left_join(cz_labels_city,     by = "CZ") |>
+  left_join(cz_labels_fallback, by = "CZ") |>
+  mutate(
+    cz_label = dplyr::coalesce(cz_label, cz_label_fallback, paste0("CZ ", CZ))
+  ) |>
+  select(CZ, cz_label)
+
+# --- Deduplicate if necessary ---
+cz_labels <- cz_labels |>
+  add_count(cz_label, name = "n_dup") |>
+  mutate(
+    cz_label = if_else(n_dup > 1, paste0(cz_label, " (CZ ", CZ, ")"), cz_label)
+  ) |>
+  select(-n_dup)
+
+# --- Attach labels back to counties and write ---
+county_cz_labels <- sff |>
+  select(countycd, CZ) |>
+  left_join(cz_labels, by = "CZ") |>
+  rename(county = countycd)
+
+#write_csv(county_cz_labels, "county_cz_labels.csv")
+```
+
+## *prepare data for mapsupply*
+
+```{r}
+supply_data_tab <- read_dta("prep/ccrc_cip_comp_aire_6dig.dta")
+
+supply_data_tab %>%
+  distinct(unitid, instnm) %>%
+  count(unitid) %>% 
+  arrange(desc(n)) %>% 
+  filter(n > 1) # 128!
+
+# rename
+latest_by_unit <- supply_data_tab %>%
+  group_by(unitid) %>%
+  summarize(latest_year = max(year, na.rm = TRUE), .groups = "drop")
+
+latest_name <- supply_data_tab %>%
+  inner_join(latest_by_unit, by = "unitid") %>%
+  filter(year == latest_year) %>%
+  count(unitid, instnm, sort = TRUE) %>%
+  group_by(unitid) %>%
+  slice_max(order_by = n, n = 1, with_ties = FALSE) %>%
+  ungroup() %>%
+  select(unitid, instnm_latest = instnm)
+
+supply_data_tab <- supply_data_tab %>%
+  left_join(latest_name, by = "unitid") %>%
+  mutate(instnm = instnm_latest) %>%
+  select(-instnm_latest)
+
+supply_data_tab %>%
+  distinct(unitid, instnm) %>%
+  count(unitid) %>% 
+  arrange(desc(n)) %>% 
+  filter(n > 1) # 128!
+
+
+
+supply_data <- supply_data_tab %>% 
+  select(instnm,
+         unitid,
+         year, 
+         state = State,
+         county = countycd,
+         aire_relevant,
+         latitude,
+         longitud,
+         total_completions = cmplt_tot
+)
+
+# unique(supply_data$county)  ### 790, and 37 rows with -2, what does -2 mean?
+
+
+# drop -2
+supply_data <- supply_data %>%
+  filter(county != -2)
+
+ ##unique(supply_data$county)  ### 753, and no -2 now
+
+##any(supply_data$county == -2, na.rm = TRUE) # FALSE
+
+
+```
+
+```{r}
+supply_data_final <- supply_data %>%
+  group_by(year, unitid, instnm, county, latitude, longitud) %>%
+  summarize(
+    inst_cmplt_tot    = sum(total_completions, na.rm = TRUE),
+    airea_completions = sum(total_completions[aire_relevant == 1], na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    inst_perc_airea_tot = dplyr::if_else(
+      inst_cmplt_tot > 0,
+      airea_completions / inst_cmplt_tot,
+      0
+    )
+  )  %>%
+  arrange(year) %>%
+  select(year, unitid, instnm, county, latitude, longitud,
+         inst_cmplt_tot, airea_completions, inst_perc_airea_tot)
+```
+
+```{r}
+map_supply <- supply_data_final %>%
+  left_join(county_cz_labels %>% select(county, cz_label),
+            by = c("county" = "county")) %>%
+  arrange(year)
+# save map_supply as rds
+saveRDS(map_supply, "prep/map_supply.rds") #for map search CCs function 
+
+## for future iteration: we can drop institution without cz_label
+
+# write down institution without cz_label
+map_supply_wocz<- map_supply%>%
+         filter(is.na(cz_label)) %>%
+         select(unitid, instnm, year, cz_label) %>%
+         arrange(instnm, year)
+
+```
+
+### prepare JSON for maptab
+
+```{r}
+# prepare JSON for map supply 
+library(dplyr)
+library(sf)
+library(geojsonio)
+# Ensure longitude and latitude fields are present
+# Use "longitud" and "latitude" as coordinate columns and convert to an sf object
+institutes_sf <- map_supply %>%
+  filter(!is.na(longitud), !is.na(latitude)) %>%
+  st_as_sf(coords = c("longitud", "latitude"), crs = 4326)
+
+
+institutes_sf1 <- institutes_sf %>%
+  rename( inst_green_cmplt_tot = airea_completions,
+          inst_perc_green_tot = inst_perc_airea_tot) %>%
+  select(year, instnm, cz_label, inst_cmplt_tot, inst_green_cmplt_tot, inst_perc_green_tot)
+
+
+# Define the list of years to export (e.g., 2010 through 2013)
+years <- sort(unique(map_supply$year))
+
+# Loop over each year, filter the data, and write out a GeoJSON file
+for (yr in years) {
+  subset_data <- institutes_sf1 %>%
+    filter(year == yr)
+  
+  # Build the output filename, e.g., "InstituteData_2010.json"
+  filename <- paste0("InstituteData_", yr, ".json")
+  
+  # Export the filtered data as GeoJSON
+  geojson_write(subset_data, file = filename)
+  message("Saved file: ", filename)
+}
+```
+
+## prepare Json for maptab demand
+
+```{r}
+### purpose : map demand JSON with Data columns: CZ20, YEAR, total_postings, airea_job_posting, pop, pct_green, per1000, geometry
+
+library(arrow)
+demand0828 <- read_parquet("prep/demand.parquet.gzip")
+
+```
+
+```{r}
+# =============================================================================
+# End-to-End Pipeline: demand0828 → CZ-year metrics (sum population) → attach CZ20 & geometry → per-year GeoJSON
+# =============================================================================
+library(dplyr)
+library(sf)
+library(readr)
+library(arrow)
+
+# -----------------------------
+# 0) Inputs required
+# -----------------------------
+# - demand0828: tibble/data.frame at SOC × CZ_LABEL × YEAR level
+#               Must contain: cz_label, year, soc, total_job_postings, airea (0/1)
+# - county_cz_labels: tibble/sf with at least: county (int FIPS), CZ (int), cz_label (chr)
+# - county_pop_ts: tibble with: GEOID (chr FIPS), year (int), estimate (num)
+# - cz20: sf multipolygon with CZ20 (int) + geometry
+
+# -----------------------------
+# 1) Standardize keys
+# -----------------------------
+county_cz_labels_std <- county_cz_labels %>%
+  st_drop_geometry() %>%
+  transmute(
+    county   = as.integer(county),
+    CZ20     = as.integer(CZ),     # rename CZ → CZ20
+    cz_label = as.character(cz_label)
+  )
+
+county_pop_ts_std <- county_pop_ts %>%
+  transmute(
+    county = as.integer(GEOID),    # "01001" → 1001
+    year   = year,
+    population_estimate = estimate
+  )
+
+# -----------------------------
+# 2) Compute CZ20–year total population (denominator for per1000)
+# -----------------------------
+cz_pop_cz20_year <- county_pop_ts_std %>%
+  left_join(county_cz_labels_std %>% select(county, CZ20), by = "county") %>%
+  filter(!is.na(CZ20)) %>%
+  group_by(CZ20, year) %>%
+  summarise(cz_population = sum(population_estimate, na.rm = TRUE), .groups = "drop") %>%
+  filter(year <= 2023)
+
+# -----------------------------
+# 3) Create a unique cz_label → CZ20 mapping
+#    Strategy: for each cz_label, pick the CZ20 with the largest total population (2010–2023)
+# -----------------------------
+cz_pop_by_cz20 <- county_pop_ts_std %>%
+  left_join(county_cz_labels_std, by = "county") %>%
+  filter(!is.na(CZ20), year <= 2023) %>%
+  group_by(CZ20, cz_label, year) %>%
+  summarise(cz_population = sum(population_estimate, na.rm = TRUE), .groups = "drop")
+
+cz_label_to_cz20_unique <- cz_pop_by_cz20 %>%
+  group_by(CZ20, cz_label) %>%
+  summarise(pop_total = sum(cz_population, na.rm = TRUE), .groups = "drop") %>%
+  filter(!is.na(cz_label)) %>%
+  group_by(cz_label) %>%
+  slice_max(order_by = pop_total, n = 1, with_ties = FALSE) %>%
+  ungroup() %>%
+  select(cz_label, CZ20)
+
+# -----------------------------
+# 4) Aggregate postings to CZ-year (≤2023), then attach CZ20 and population
+# -----------------------------
+cz_year <- demand0828 %>%
+  filter(year <= 2023) %>%
+  group_by(cz_label, year) %>%
+  summarise(
+    total_postings    = sum(total_job_postings, na.rm = TRUE),
+    airea_job_posting = sum(total_job_postings[airea == 1], na.rm = TRUE),
+    .groups = "drop"
+  )
+
+cz_year_fixed <- cz_year %>%
+  left_join(cz_label_to_cz20_unique, by = "cz_label") %>%
+  filter(!is.na(CZ20)) %>%
+  left_join(cz_pop_cz20_year, by = c("CZ20", "year")) %>%
+  mutate(
+    pct_green = if_else(total_postings > 0,
+                        100 * airea_job_posting / total_postings, NA_real_),
+    per1000   = if_else(cz_population > 0,
+                        1000 * total_postings / cz_population,    NA_real_)
+  ) %>%
+  rename(pop = cz_population)
+
+# -----------------------------
+# 5) Attach geometry and select fields required by the frontend
+# -----------------------------
+cz20_clean <- cz20 %>%
+  st_transform(4326) %>%
+  st_make_valid() %>%
+  st_zm(drop = TRUE, what = "ZM")
+
+cz_sf_new <- cz20_clean %>%
+  select(CZ20, geometry) %>%
+  inner_join(cz_year_fixed, by = "CZ20") %>%
+  rename(YEAR = year) %>%
+  select(CZ20, YEAR,
+         total_postings, airea_job_posting, pop, pct_green, per1000,
+         geometry)
+
+# -----------------------------
+# 6) Write per-year GeoJSON into /www (Mapbox fetches these)
+# -----------------------------
+dir.create("www", showWarnings = FALSE)
+years <- sort(unique(cz_sf_new$YEAR))
+for (y in years) {
+  out_path <- file.path("www", paste0("CZData_", y, ".json"))
+  st_write(
+    cz_sf_new %>% filter(YEAR == y),
+    out_path,
+    driver = "GeoJSON",
+    delete_dsn = TRUE
+  )
+}
+message("Done. GeoJSON written to /www as CZData_<YEAR>.json")
+
+# NOTE:
+# - Each file must be placed in Shiny’s www/ folder alongside mapbox.js
+# - The Map tab expects to fetch: 'CZData_YYYY.json':contentReference[oaicite:1]{index=1}
+
+```
