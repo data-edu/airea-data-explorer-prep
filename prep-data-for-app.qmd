@@ -15,6 +15,7 @@ library(dtplyr)
 library(sf)
 library(stringr)
 library(tigris)
+library(readxl)
 ```
 
 ## *cz labels*
@@ -136,6 +137,8 @@ county_cz_labels <- sff |>
   rename(county = countycd)
 
 write_csv(county_cz_labels, "county_cz_labels.csv")
+
+county_cz_labels <- read_csv("county_cz_labels.csv")
 ```
 
 ## *supply*
@@ -273,25 +276,32 @@ demand_data <- demand_data %>%
   left_join(county_cz_labels, by = "county") %>% 
   select(-CZ)
 
-demand_meta_data <- read_dta("prep/full_soc.dta")
+# demand_meta_data_old <- read_dta("prep/full_soc.dta")
+demand_meta_data <- read_excel("prep/FINALaireaSOCcs_090225.xls")
 
-demand_meta_data <- demand_meta_data %>%
-  mutate(aire_ind = as_factor(aire_ind)) %>%  # keep descriptive labels
-  mutate(value = 1) %>%                       # mark presence
-  pivot_wider(
-    names_from = aire_ind, 
-    values_from = value, 
-    values_fill = list(value = 0)
-  ) %>% 
-  janitor::clean_names() %>% 
-  rename(industry_non_airea = non_aire,
-         industry_energy = energy,
-         industry_infrastructure = infrastructure,
-         industry_ag_nat_resources = agriculture_natural_resources)
+demand_meta_data <- demand_meta_data %>% 
+  mutate(airea = 1)
+  
+# demand_meta_data <- demand_meta_data %>%
+#   mutate(aire_ind = as_factor(aire_ind)) %>%  # keep descriptive labels
+#   mutate(value = 1) %>%                       # mark presence
+#   pivot_wider(
+#     names_from = aire_ind, 
+#     values_from = value, 
+#     values_fill = list(value = 0)
+#   ) %>% 
+#   janitor::clean_names() %>% 
+#   rename(industry_non_airea = non_aire,
+#          industry_energy = energy,
+#          industry_infrastructure = infrastructure,
+#          industry_ag_nat_resources = agriculture_natural_resources)
 
 demand_data <- demand_data %>% 
   rename(soc = SOC_CODE) %>% 
-  left_join(demand_meta_data)
+  left_join(demand_meta_data) 
+
+demand_data <- demand_data %>% 
+  mutate(airea = ifelse(is.na(airea), 0, airea))
 
 # years <- 2010:2023
 # 
@@ -327,11 +337,9 @@ demand_data <- demand_data %>%
          soc,
          soc_title = soc2018title, 
          job_posting_count = JOB_POSTING_COUNT,
-         ed_req,
-         airea = aire_relevant,
-         population_estimate,
-         contains("industry")
-  )
+         ed_req = entryedlevel,
+         airea,
+         population_estimate)
 
 demand_summed_by_cz <- lazy_dt(demand_data) %>%
   group_by(cz_label, year, soc) %>%
@@ -343,7 +351,6 @@ demand_summed_by_cz <- lazy_dt(demand_data) %>%
     soc_title                = first(soc_title),
     ed_req                   = first(ed_req),
     airea                    = first(airea),
-    across(starts_with("industry_"), first),
     
     .groups = "drop"
   ) %>%

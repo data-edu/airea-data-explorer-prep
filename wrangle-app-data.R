@@ -5,6 +5,9 @@ library(scales)
 
 supply <- read_parquet("prep/supply.parquet.gzip")
 
+supply %>% 
+  glimpse()
+
 supply_nat_ave <- supply %>% 
   group_by(instnm, year) %>% 
   summarize(tot_completions = sum(total_completions, na.rm = TRUE),
@@ -91,6 +94,8 @@ selected_instm_year %>%
 
 demand_tab <- arrow::read_parquet("prep/demand.parquet.gzip")
 
+demand_tab %>% write_csv("demand-data-for-researchers.csv")
+
 cz_year <- demand_tab %>%
   select(cz_label, year, mean_population, total_job_postings, airea) %>%
   group_by(cz_label, year) %>%
@@ -147,6 +152,7 @@ cz_table %>%
   write_csv("prep/cz-summary-table.csv")
 
 demand_ds <- open_dataset("prep/demand_partitioned", format = "parquet")
+demand_ds
 
 demand_selected_inst <- demand_ds %>%
   filter(cz_label == "Knoxville, TN") %>% 
