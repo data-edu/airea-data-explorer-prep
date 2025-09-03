@@ -33,10 +33,68 @@ sff <- sf::read_sf("prep/CommutingZones2020_County_GIS_files/county20.shp") |>
     CZ       = CZ20
   )
 
+# --- CONNECTICUT FIX: Handle old/new FIPS codes ---
+# Old Connecticut county codes (before reorganization)
+old_ct_codes <- c(9001, 9003, 9005, 9007, 9009, 9011, 9013, 9015)
+
+# New Connecticut planning region codes (after reorganization)
+# These are the new codes that replaced the old county system
+new_ct_codes <- c(9110, 9120, 9130, 9140, 9150, 9160, 9170, 9180, 9190)
+
+# Find the CZ for Connecticut from existing data (if any CT county exists)
+ct_cz <- sff |>
+  filter(countycd %in% old_ct_codes | countycd %in% new_ct_codes) |>
+  pull(CZ) |>
+  unique()
+
+# If we found a Connecticut CZ, ensure all CT codes map to it
+if(length(ct_cz) > 0) {
+  # Use the first CZ if multiple found (they should all be the same)
+  ct_cz <- ct_cz[1]
+  
+  # Create rows for any missing Connecticut codes
+  ct_rows <- tibble(
+    countycd = c(old_ct_codes, new_ct_codes),
+    CZ = ct_cz
+  )
+  
+  # Add missing Connecticut counties to sff
+  sff <- sff |>
+    # Remove any existing CT entries to avoid duplicates
+    filter(!(countycd %in% c(old_ct_codes, new_ct_codes))) |>
+    # Add back all CT codes with the same CZ
+    bind_rows(ct_rows) |>
+    distinct(countycd, CZ, .keep_all = TRUE)
+  
+  message(paste("Connecticut counties mapped to CZ:", ct_cz))
+} else {
+  warning("No Connecticut counties found in original data. You may need to manually specify the CZ.")
+  # If you know the specific CZ for Connecticut, you can hardcode it here:
+  # ct_cz <- "YOUR_CT_CZ_CODE_HERE"  # Replace with actual CZ code
+  # ct_rows <- tibble(
+  #   countycd = c(old_ct_codes, new_ct_codes),
+  #   CZ = ct_cz
+  # )
+  # sff <- bind_rows(sff, ct_rows) |> distinct(countycd, CZ, .keep_all = TRUE)
+}
+
 # --- Cities (≥ 1,000 pop), keep all (not only top per county) ---
 city_data <- read_csv("prep/us_cities_over_1000_with_county_fips.csv") |>
   mutate(countycd = as.integer(county_fips)) |>
   select(city, state_name, countycd, population)
+
+# --- Handle Connecticut cities that might have old or new codes ---
+# If your city data uses old codes but your shapefile uses new codes (or vice versa),
+# we need to map between them
+city_data <- city_data |>
+  mutate(
+    # If a city has an old CT code, also create entries for potential new codes
+    countycd = case_when(
+      countycd %in% old_ct_codes & length(ct_cz) > 0 ~ countycd,
+      countycd %in% new_ct_codes & length(ct_cz) > 0 ~ countycd,
+      TRUE ~ countycd
+    )
+  )
 
 # --- State name -> postal abbreviation (add DC + territories as needed) ---
 state_map <- tibble::tibble(
@@ -95,13 +153,41 @@ county_names <- county_names |>
   ) |>
   select(countycd, county_st)
 
+# --- Add fallback names for Connecticut counties if missing ---
+# Since tigris might not have all the old/new codes, add manual names
+ct_county_names <- tibble(
+  countycd = c(
+    # Old codes with traditional county names
+    9001, 9003, 9005, 9007, 9009, 9011, 9013, 9015,
+    # New planning region codes (you may need to adjust these names)
+    9110, 9120, 9130, 9140, 9150, 9160, 9170, 9180, 9190
+  ),
+  county_st = c(
+    # Old county names
+    "Fairfield Co., CT", "Hartford Co., CT", "Litchfield Co., CT", 
+    "Middlesex Co., CT", "New Haven Co., CT", "New London Co., CT",
+    "Tolland Co., CT", "Windham Co., CT",
+    # New planning region names (adjust as needed)
+    "Capitol Region, CT", "Greater Bridgeport Region, CT", "Lower Connecticut River Valley Region, CT",
+    "Naugatuck Valley Region, CT", "Northeastern CT Region, CT", "Northwest Hills Region, CT",
+    "South Central Region, CT", "Southeastern CT Region, CT", "Western CT Region, CT"
+  )
+)
+
+# Combine with existing county names, preferring tigris data where available
+county_names <- county_names |>
+  bind_rows(
+    ct_county_names |>
+      filter(!(countycd %in% county_names$countycd))
+  )
+
 # --- COUNTY-NAME fallback (singular/plural prefix) ---
 cz_labels_fallback <- sff |>
   left_join(county_names, by = "countycd") |>
   group_by(CZ) |>
   summarise(
-    counties_named = paste(sort(unique(county_st)), collapse = ", "),
-    n_cty = n_distinct(county_st),
+    counties_named = paste(sort(unique(county_st[!is.na(county_st)])), collapse = ", "),
+    n_cty = n_distinct(county_st[!is.na(county_st)]),
     .groups = "drop"
   ) |>
   mutate(
@@ -137,7 +223,6 @@ county_cz_labels <- sff |>
   rename(county = countycd)
 
 write_csv(county_cz_labels, "county_cz_labels.csv")
-
 county_cz_labels <- read_csv("county_cz_labels.csv")
 ```
 
@@ -145,6 +230,12 @@ county_cz_labels <- read_csv("county_cz_labels.csv")
 
 ```{r}
 supply_data_tab <- read_dta("prep/ccrc_cip_comp_aire_6dig.dta")
+
+supply_data_tab
+# supply_data_tab_old <- read_dta("prep/ccrc_cip_comp_aire_6dig-old.dta")
+
+supply_data_tab <- supply_data_tab %>% 
+  mutate(aire_cmplt_tot = cmplt_tot * aire_relevant)
 
 supply_data_tab %>%
   distinct(unitid, instnm) %>%
@@ -193,7 +284,10 @@ supply_data <- supply_data_tab %>%
          airea_completions = aire_cmplt_tot,
          total_students_enrolled = eftotlt1,
          total_ft_students_enrolled = eftotlt21,
-         webaddr)
+         webaddr,
+         latitude,
+         longitud
+         )
 
 supply_data <- supply_data %>% 
   mutate(ciptitle = str_trim(ciptitle))
