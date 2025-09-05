@@ -43,18 +43,23 @@ files_demand <- list_parquet(dir_demand)
 
 message("Creating demand table from Parquet…")
 dbExecute(con_d, sprintf(
-  "CREATE TABLE demand AS\n   SELECT * FROM read_parquet(%s, filename=true);\n",
+  "CREATE TABLE demand AS
+   SELECT * FROM read_parquet(%s, filename=true, union_by_name=true);",
   files_demand
 ))
 
 message("Ordering demand by cz_label, year (improves compression/pruning)…")
-dbExecute(con_d, "\n  CREATE TABLE demand_sorted AS\n  SELECT * FROM demand ORDER BY cz_label, year;\n  DROP TABLE demand;\n  ALTER TABLE demand_sorted RENAME TO demand;\n")
+dbExecute(con_d, "
+  CREATE TABLE demand_sorted AS
+  SELECT * FROM demand ORDER BY cz_label, year;
+  DROP TABLE demand;
+  ALTER TABLE demand_sorted RENAME TO demand;
+")
 
 message("Creating index on (cz_label, year)…")
 dbExecute(con_d, "CREATE INDEX idx_demand_cz_year ON demand(cz_label, year);")
 
 message("Running ANALYZE and optimizer…")
-# DuckDB expects one statement per call
 try(dbExecute(con_d, "ANALYZE;"), silent = TRUE)
 try(dbExecute(con_d, "PRAGMA optimize;"), silent = TRUE)
 
@@ -67,23 +72,98 @@ print(dbGetQuery(con_d, "SELECT * FROM duckdb_indexes() WHERE table_name = 'dema
 dbDisconnect(con_d, shutdown = TRUE)
 
 # ==========================
-# SUPPLY
+# SUPPLY  (per-file ingest with casts; avoids global schema inference)
 # ==========================
 message("\n=== Building supply.duckdb ===")
 
 supply_db <- recreate_db(file.path(out_dir, "supply.duckdb"))
 con_s <- dbConnect(duckdb(), dbdir = supply_db)
 
-files_supply <- list_parquet(dir_supply)
+# Create target table with fixed schema
+dbExecute(con_s, "
+  CREATE TABLE supply (
+    instnm                      VARCHAR,
+    unitid                      BIGINT,
+    aire_ind                    SMALLINT,
+    year                        INTEGER,
+    state                       VARCHAR,
+    tribal                      SMALLINT,
+    rural                       SMALLINT,
+    cip                         INTEGER,
+    ciptitle                    VARCHAR,
+    award_level                 SMALLINT,
+    total_completions           INTEGER,
+    airea_completions           INTEGER,
+    total_students_enrolled     INTEGER,
+    total_ft_students_enrolled  INTEGER,
+    webaddr                     VARCHAR,
+    latitude                    DOUBLE,
+    longitud                    DOUBLE,
+    cz_label                    VARCHAR,
+    src_file                    VARCHAR
+  );
+")
 
-message("Creating supply table from Parquet…")
-dbExecute(con_s, sprintf(
-  "CREATE TABLE supply AS\n   SELECT * FROM read_parquet(%s, filename=true);\n",
-  files_supply
-))
+# Gather files (each loads fine alone; we avoid cross-file unification)
+files <- list.files(dir_supply, pattern="\\.parquet$", recursive=TRUE, full.names=TRUE)
+stopifnot(length(files) > 0)
+
+esc <- function(x) gsub("'", "''", normalizePath(x, winslash = "/"))
+
+message(sprintf("Ingesting %d supply files (per-file casts)…", length(files)))
+fail <- list()
+n <- 0L
+
+for (f in files) {
+  n <- n + 1L
+  if (n %% 200 == 0) message(sprintf("… %d/%d files", n, length(files)))
+  sql <- sprintf("
+    INSERT INTO supply
+    SELECT
+      CAST(instnm AS VARCHAR)                                         AS instnm,
+      TRY_CAST(unitid AS BIGINT)                                      AS unitid,
+      TRY_CAST(aire_ind AS SMALLINT)                                  AS aire_ind,
+      TRY_CAST(year AS INTEGER)                                       AS year,
+      CAST(state AS VARCHAR)                                          AS state,
+      TRY_CAST(tribal AS SMALLINT)                                    AS tribal,
+      TRY_CAST(rural AS SMALLINT)                                     AS rural,
+      TRY_CAST(cip AS INTEGER)                                        AS cip,
+      CAST(ciptitle AS VARCHAR)                                       AS ciptitle,
+      TRY_CAST(award_level AS SMALLINT)                               AS award_level,
+      TRY_CAST(total_completions AS INTEGER)                          AS total_completions,
+      TRY_CAST(airea_completions AS INTEGER)                          AS airea_completions,
+      TRY_CAST(total_students_enrolled AS INTEGER)                    AS total_students_enrolled,
+      TRY_CAST(total_ft_students_enrolled AS INTEGER)                 AS total_ft_students_enrolled,
+      CAST(webaddr AS VARCHAR)                                        AS webaddr,
+      TRY_CAST(latitude AS DOUBLE)                                    AS latitude,
+      TRY_CAST(longitud AS DOUBLE)                                    AS longitud,
+      CAST(cz_label AS VARCHAR)                                       AS cz_label,
+      filename                                                        AS src_file
+    FROM read_parquet('%s',
+          filename=true,
+          hive_partitioning=1,
+          union_by_name=true,
+          binary_as_string=true
+    );
+  ", esc(f))
+  tryCatch(
+    dbExecute(con_s, sql),
+    error = function(e) fail[[length(fail)+1]] <<- list(file=f, err=conditionMessage(e))
+  )
+}
+
+if (length(fail)) {
+  message(sprintf("WARNING: %d files failed to ingest. Showing first few:", length(fail)))
+  print(head(do.call(rbind, lapply(fail, as.data.frame)), 10))
+}
 
 message("Ordering supply by instnm, year…")
-dbExecute(con_s, "\n  CREATE TABLE supply_sorted AS\n  SELECT * FROM supply ORDER BY instnm, year;\n  DROP TABLE supply;\n  ALTER TABLE supply_sorted RENAME TO supply;\n")
+dbExecute(con_s, "
+  CREATE TABLE supply_sorted AS
+  SELECT * FROM supply ORDER BY instnm, year;
+  DROP TABLE supply;
+  ALTER TABLE supply_sorted RENAME TO supply;
+")
 
 message("Creating index on (instnm, year)…")
 dbExecute(con_s, "CREATE INDEX idx_supply_inst_year ON supply(instnm, year);")
@@ -100,29 +180,23 @@ print(dbGetQuery(con_s, "SELECT * FROM duckdb_indexes() WHERE table_name = 'supp
 
 dbDisconnect(con_s, shutdown = TRUE)
 
-message("\nAll done. DBs written to 'data/demand.duckdb' and 'data/supply.duckdb'.")
-
+# ----------------------------
+# Sample query usage (read-only)
+# ----------------------------
 library(dplyr)
 
-# Open both DBs read-only
 con_demand <- dbConnect(duckdb(), dbdir = "data/demand.duckdb", read_only = TRUE)
 con_supply <- dbConnect(duckdb(), dbdir = "data/supply.duckdb", read_only = TRUE)
 
-# Lazy dplyr table handles
 Demand <- tbl(con_demand, "demand")
 Supply <- tbl(con_supply, "supply")
 
-# ----------------------------
-# Sample queries
-# ----------------------------
-
-# 1. Demand for a given CZ + year
+# Example: Demand for a given CZ + year
 demand_knox_2024 <- Demand %>%
   filter(cz_label == "Knoxville, TN", year == 2024) %>%
   collect()
 
 print(demand_knox_2024)
 
-# Disconnect
 dbDisconnect(con_demand, shutdown = TRUE)
 dbDisconnect(con_supply, shutdown = TRUE)

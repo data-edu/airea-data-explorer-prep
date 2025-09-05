@@ -6,6 +6,9 @@ library(scales)
 supply <- read_parquet("prep/supply.parquet.gzip")
 
 supply %>% 
+  count(award_level)
+
+supply %>% 
   glimpse()
 
 supply_nat_ave <- supply %>% 
@@ -24,7 +27,7 @@ supply_nat_ave <- supply %>%
 
 write_csv(supply_nat_ave, "prep/supply-nat-ave.csv")
 
-soc <- read_dta("prep/full_soc.dta")
+# soc <- read_dta("prep/full_soc.dta")
 
 supply_table <- supply %>% 
   group_by(instnm, year) %>% 
@@ -34,14 +37,28 @@ supply_table <- supply %>%
             rural = first(rural),
             tribal = first(tribal),
             cz_label = first(cz_label)) %>% 
-  group_by(instnm) %>%
-  summarize(mean_completions = mean(tot_completions, na.rm = TRUE),
-            mean_airea_completions = mean(tot_airea_completions, na.rm = TRUE),
-            mean_students_enrolled = mean(first_students_enrolled, na.rm = TRUE),
-            rural = first(rural),
-            tribal = first(tribal),
-            cz_label = first(cz_label)) %>% 
-  mutate(pct_airea_completions = mean_airea_completions/mean_completions)
+  # group_by(instnm) %>%
+  # summarize(mean_completions = mean(tot_completions, na.rm = TRUE),
+  #           mean_airea_completions = mean(tot_airea_completions, na.rm = TRUE),
+  #           mean_students_enrolled = mean(first_students_enrolled, na.rm = TRUE),
+  #           rural = first(rural),
+  #           tribal = first(tribal),
+  #           cz_label = first(cz_label)) %>% 
+  mutate(pct_airea_completions = tot_airea_completions/tot_completions)
+
+supply_table <- supply_table %>% 
+  mutate(rural = if_else(rural == 1, "Rural", "Non-rural")) %>% 
+  mutate(tribal = if_else(tribal == 1, "Tribal", "Non-tribal"))
+
+write_csv(supply_table, "prep/supply-table-for-app.csv")
+
+supply_table %>% 
+  ungroup() %>% 
+  count(rural)
+
+supply_table %>% 
+  ungroup() %>% 
+  count(tribal)
 
 write_csv(supply_table, "prep/supply-table.csv")
 
@@ -94,6 +111,109 @@ selected_instm_year %>%
 
 demand_tab <- arrow::read_parquet("prep/demand.parquet.gzip")
 
+demand_tab
+
+library(dplyr)
+library(stringr)
+library(ggplot2)
+library(tibble)
+
+# 1) Lookup: 2-digit SOC -> short group label
+soc_groups <- tribble(
+  ~code, ~soc_group_short,
+  "11","Management",
+  "13","Business & Financial Ops",
+  "15","Computer & Math",
+  "17","Architecture & Engineering",
+  "19","Life/Physical/Social Sci",
+  "21","Community & Social Service",
+  "23","Legal",
+  "25","Education & Library",
+  "27","Arts, Media & Sports",
+  "29","Healthcare Practitioners & Tech",
+  "31","Healthcare Support",
+  "33","Protective Service",
+  "35","Food Prep & Serving",
+  "37","Building & Grounds Maint",
+  "39","Personal Care & Service",
+  "41","Sales & Related",
+  "43","Office & Admin Support",
+  "45","Farming/Fishing/Forestry",
+  "47","Construction & Extraction",
+  "49","Install/Maint/Repair",
+  "51","Production",
+  "53","Transportation & Material Moving"
+)
+
+library(dplyr)
+library(stringr)
+library(ggplot2)
+library(scales)
+library(dplyr)
+library(stringr)
+library(ggplot2)
+library(scales)
+library(ggrepel)
+
+#library(dplyr)
+library(stringr)
+library(ggplot2)
+library(scales)
+library(ggrepel)
+
+# Build df as you already do
+df <- demand_tab %>%
+  filter(airea == 1, year <= 2023) %>%
+  mutate(
+    soc_clean = str_replace_all(as.character(soc), "\\D", ""),
+    soc2      = str_sub(str_pad(soc_clean, width = 6, side = "left", pad = "0"), 1, 2)
+  ) %>%
+  left_join(soc_groups, by = c("soc2" = "code")) %>%
+  group_by(year, soc2, soc_group_short) %>%
+  summarise(total_job_postings_sum = sum(total_job_postings, na.rm = TRUE), .groups = "drop") %>%
+  tidyr::drop_na(soc_group_short)
+
+last_year <- max(df$year, na.rm = TRUE)
+
+# One point per group at the last year for labels
+lab_df <- df %>%
+  group_by(soc_group_short) %>%
+  filter(year == max(year)) %>%
+  slice_tail(n = 1) %>%
+  ungroup()
+
+ggplot(df, aes(x = year, y = total_job_postings_sum,
+               color = soc_group_short, group = soc_group_short)) +
+  geom_line(linewidth = 1.1) +
+  geom_point(size = 1.6) +
+  # Direct labels at the end of each line
+  geom_text_repel(
+    data = lab_df,
+    aes(label = soc_group_short),
+    direction = "y", hjust = 0, nudge_x = 0.35,
+    size = 3, segment.alpha = 0.35, segment.size = 0.25,
+    box.padding = 0.2, point.padding = 0.15,
+    show.legend = FALSE
+  ) +
+  # Room for labels beyond last year + commas on y
+  scale_x_continuous(limits = c(min(df$year), last_year + 0.8),
+                     breaks = pretty_breaks(n = 10),
+                     expand = expansion(mult = c(0.02, 0.15))) +
+  scale_y_continuous(labels = comma) +
+  scale_color_viridis_d(option = "plasma", end = 0.92) +
+  labs(x = NULL, y = "Job Postings") +
+  coord_cartesian(clip = "off") +
+  theme_minimal(base_size = 12) +
+  theme(
+    legend.position = "none",
+    panel.grid.minor = element_blank(),
+    plot.margin = margin(5, 80, 5, 5) # room on right for labels
+  ) +
+  ggtitle("Job Postings by SOC Code Group")
+
+ggsave("job postings by soc.png", width = 9, height = 6)
+
+
 demand_tab %>% write_csv("demand-data-for-researchers.csv")
 
 cz_year <- demand_tab %>%
@@ -123,6 +243,13 @@ cz_year %>%
   ) %>% 
   write_csv("prep/demand-nat-ave.csv")
 
+cz_year %>% 
+  mutate(airea_pct_posts = if_else(posts_total > 0,
+                              posts_airea / posts_total, NA_real_)) %>% 
+  mutate(posts_per_1000 = if_else(cz_pop_year > 0,
+                              (posts_total / cz_pop_year) * 1000, NA_real_)) %>% 
+  write_csv("prep/demand-table-for-app.csv")
+
 cz_summary <- cz_year %>%
   group_by(cz_label) %>%
   summarise(
@@ -137,6 +264,8 @@ cz_summary <- cz_year %>%
   ) %>%
   arrange(desc(mean_job_posts))
 
+cz_summary
+
 cz_table <- cz_summary %>%
   arrange(desc(mean_job_posts)) %>%
   select(
@@ -147,9 +276,6 @@ cz_table <- cz_summary %>%
     `posts per 1,000` = posts_per_1000,
     `CZ population`   = cz_population
   )
-
-cz_table %>% 
-  write_csv("prep/cz-summary-table.csv")
 
 demand_ds <- open_dataset("prep/demand_partitioned", format = "parquet")
 demand_ds
