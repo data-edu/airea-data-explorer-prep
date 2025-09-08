@@ -1,0 +1,204 @@
+year,soc_group_short,total_postings
+2010,Management,212607
+2010,Business & Financial Ops,37001
+2010,Computer & Math,1
+2010,Architecture & Engineering,348016
+2010,Life/Physical/Social Sci,113743
+2010,"Arts, Media & Sports",20994
+2010,Healthcare Practitioners & Tech,2740
+2010,Protective Service,2187
+2010,Building & Grounds Maint,33890
+2010,Personal Care & Service,16043
+2010,Farming/Fishing/Forestry,4500
+2010,Construction & Extraction,93132
+2010,Install/Maint/Repair,312182
+2010,Production,112127
+2010,Transportation & Material Moving,214673
+2011,Management,281931
+2011,Business & Financial Ops,49242
+2011,Computer & Math,1
+2011,Architecture & Engineering,507743
+2011,Life/Physical/Social Sci,145570
+2011,"Arts, Media & Sports",26602
+2011,Healthcare Practitioners & Tech,2890
+2011,Protective Service,2636
+2011,Building & Grounds Maint,40313
+2011,Personal Care & Service,24412
+2011,Farming/Fishing/Forestry,5459
+2011,Construction & Extraction,116197
+2011,Install/Maint/Repair,392408
+2011,Production,165555
+2011,Transportation & Material Moving,292218
+2012,Management,281607
+2012,Business & Financial Ops,51533
+2012,Architecture & Engineering,520701
+2012,Life/Physical/Social Sci,152491
+2012,"Arts, Media & Sports",29354
+2012,Healthcare Practitioners & Tech,4822
+2012,Protective Service,2451
+2012,Building & Grounds Maint,44362
+2012,Personal Care & Service,22736
+2012,Farming/Fishing/Forestry,6011
+2012,Construction & Extraction,119064
+2012,Install/Maint/Repair,398852
+2012,Production,164712
+2012,Transportation & Material Moving,275987
+2013,Management,365340
+2013,Business & Financial Ops,68792
+2013,Architecture & Engineering,597874
+2013,Life/Physical/Social Sci,187428
+2013,"Arts, Media & Sports",34222
+2013,Healthcare Practitioners & Tech,5982
+2013,Protective Service,3807
+2013,Building & Grounds Maint,63272
+2013,Personal Care & Service,34303
+2013,Farming/Fishing/Forestry,10799
+2013,Construction & Extraction,203536
+2013,Install/Maint/Repair,577181
+2013,Production,235417
+2013,Transportation & Material Moving,441112
+2014,Management,388383
+2014,Business & Financial Ops,75418
+2014,Computer & Math,1
+2014,Architecture & Engineering,601301
+2014,Life/Physical/Social Sci,199398
+2014,"Arts, Media & Sports",35347
+2014,Healthcare Practitioners & Tech,7672
+2014,Protective Service,4582
+2014,Building & Grounds Maint,74637
+2014,Personal Care & Service,38535
+2014,Farming/Fishing/Forestry,12879
+2014,Construction & Extraction,235625
+2014,Install/Maint/Repair,640606
+2014,Production,264537
+2014,Transportation & Material Moving,656652
+2015,Management,429249
+2015,Business & Financial Ops,83239
+2015,Computer & Math,1
+2015,Architecture & Engineering,667327
+2015,Life/Physical/Social Sci,208474
+2015,"Arts, Media & Sports",42890
+2015,Healthcare Practitioners & Tech,11634
+2015,Protective Service,5252
+2015,Building & Grounds Maint,74511
+2015,Personal Care & Service,26467
+2015,Farming/Fishing/Forestry,14704
+2015,Construction & Extraction,238879
+2015,Install/Maint/Repair,671577
+2015,Production,228369
+2015,Transportation & Material Moving,827846
+2016,Management,448127
+2016,Business & Financial Ops,84463
+2016,Computer & Math,2
+2016,Architecture & Engineering,646422
+2016,Life/Physical/Social Sci,206093
+2016,"Arts, Media & Sports",41459
+2016,Healthcare Practitioners & Tech,16686
+2016,Protective Service,4667
+2016,Building & Grounds Maint,76515
+2016,Personal Care & Service,26643
+2016,Farming/Fishing/Forestry,12286
+2016,Construction & Extraction,252382
+2016,Install/Maint/Repair,695387
+2016,Production,232857
+2016,Transportation & Material Moving,812055
+2017,Management,433028
+2017,Business & Financial Ops,85748
+2017,Architecture & Engineering,661048
+2017,Life/Physical/Social Sci,197530
+2017,"Arts, Media & Sports",34558
+2017,Healthcare Practitioners & Tech,17802
+2017,Protective Service,4737
+2017,Building & Grounds Maint,77273
+2017,Personal Care & Service,17221
+2017,Farming/Fishing/Forestry,10436
+2017,Construction & Extraction,252533
+2017,Install/Maint/Repair,667053
+2017,Production,248969
+2017,Transportation & Material Moving,1177340
+2018,Management,584629
+2018,Business & Financial Ops,119731
+2018,Architecture & Engineering,817297
+2018,Life/Physical/Social Sci,256618
+2018,"Arts, Media & Sports",54823
+2018,Healthcare Practitioners & Tech,18824
+2018,Protective Service,5238
+2018,Building & Grounds Maint,117935
+2018,Personal Care & Service,63493
+2018,Farming/Fishing/Forestry,14096
+2018,Construction & Extraction,362705
+2018,Install/Maint/Repair,919904
+2018,Production,330340
+2018,Transportation & Material Moving,1191260
+2019,Management,590448
+2019,Business & Financial Ops,126422
+2019,Architecture & Engineering,855080
+2019,Life/Physical/Social Sci,265395
+2019,"Arts, Media & Sports",55949
+2019,Healthcare Practitioners & Tech,20809
+2019,Protective Service,5650
+2019,Building & Grounds Maint,138440
+2019,Personal Care & Service,64262
+2019,Farming/Fishing/Forestry,14812
+2019,Construction & Extraction,376406
+2019,Install/Maint/Repair,977315
+2019,Production,315423
+2019,Transportation & Material Moving,776789
+2020,Management,574620
+2020,Business & Financial Ops,127703
+2020,Computer & Math,2
+2020,Architecture & Engineering,671924
+2020,Life/Physical/Social Sci,264134
+2020,"Arts, Media & Sports",47399
+2020,Healthcare Practitioners & Tech,43659
+2020,Protective Service,7299
+2020,Building & Grounds Maint,157548
+2020,Personal Care & Service,64535
+2020,Farming/Fishing/Forestry,16270
+2020,Construction & Extraction,424218
+2020,Install/Maint/Repair,1031528
+2020,Production,310999
+2020,Transportation & Material Moving,1057580
+2021,Management,755755
+2021,Business & Financial Ops,156980
+2021,Architecture & Engineering,830301
+2021,Life/Physical/Social Sci,331995
+2021,"Arts, Media & Sports",63738
+2021,Healthcare Practitioners & Tech,47010
+2021,Protective Service,7030
+2021,Building & Grounds Maint,227537
+2021,Personal Care & Service,85194
+2021,Farming/Fishing/Forestry,23114
+2021,Construction & Extraction,596367
+2021,Install/Maint/Repair,1339859
+2021,Production,411801
+2021,Transportation & Material Moving,1289439
+2022,Management,849999
+2022,Business & Financial Ops,168568
+2022,Computer & Math,1
+2022,Architecture & Engineering,1113952
+2022,Life/Physical/Social Sci,405255
+2022,"Arts, Media & Sports",70378
+2022,Healthcare Practitioners & Tech,38904
+2022,Protective Service,8521
+2022,Building & Grounds Maint,232537
+2022,Personal Care & Service,98212
+2022,Farming/Fishing/Forestry,23126
+2022,Construction & Extraction,584455
+2022,Install/Maint/Repair,1569132
+2022,Production,444938
+2022,Transportation & Material Moving,982037
+2023,Management,687212
+2023,Business & Financial Ops,134560
+2023,Architecture & Engineering,922055
+2023,Life/Physical/Social Sci,326359
+2023,"Arts, Media & Sports",44979
+2023,Healthcare Practitioners & Tech,45664
+2023,Protective Service,8297
+2023,Building & Grounds Maint,176316
+2023,Personal Care & Service,68801
+2023,Farming/Fishing/Forestry,20175
+2023,Construction & Extraction,478209
+2023,Install/Maint/Repair,1365207
+2023,Production,380816
+2023,Transportation & Material Moving,819249

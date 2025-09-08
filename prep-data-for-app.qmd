@@ -222,6 +222,10 @@ county_cz_labels <- sff |>
   left_join(cz_labels, by = "CZ") |>
   rename(county = countycd)
 
+county_cz_labels <- county_cz_labels %>% 
+  mutate(cz_label = str_remove(cz_label, "County: ")) %>%
+  mutate(cz_label = str_remove(cz_label, "Counties: "))
+  
 write_csv(county_cz_labels, "county_cz_labels.csv")
 county_cz_labels <- read_csv("county_cz_labels.csv")
 ```

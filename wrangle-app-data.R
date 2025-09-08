@@ -111,6 +111,8 @@ selected_instm_year %>%
 
 demand_tab <- arrow::read_parquet("prep/demand.parquet.gzip")
 
+readr::write_csv(demand_tab, "demand-data.csv")
+
 demand_tab
 
 library(dplyr)
@@ -172,6 +174,9 @@ df <- demand_tab %>%
   group_by(year, soc2, soc_group_short) %>%
   summarise(total_job_postings_sum = sum(total_job_postings, na.rm = TRUE), .groups = "drop") %>%
   tidyr::drop_na(soc_group_short)
+library(tidyverse)
+
+df %>% select(-soc2) %>% rename(total_postings = total_job_postings_sum) %>%  write_csv('demand-aggregate-data.csv')
 
 last_year <- max(df$year, na.rm = TRUE)
 
@@ -181,6 +186,8 @@ lab_df <- df %>%
   filter(year == max(year)) %>%
   slice_tail(n = 1) %>%
   ungroup()
+
+lab_df
 
 ggplot(df, aes(x = year, y = total_job_postings_sum,
                color = soc_group_short, group = soc_group_short)) +
@@ -208,9 +215,7 @@ ggplot(df, aes(x = year, y = total_job_postings_sum,
     legend.position = "none",
     panel.grid.minor = element_blank(),
     plot.margin = margin(5, 80, 5, 5) # room on right for labels
-  ) +
-  ggtitle("Job Postings by SOC Code Group")
-
+  ) 
 ggsave("job postings by soc.png", width = 9, height = 6)
 
 
