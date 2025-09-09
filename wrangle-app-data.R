@@ -8,6 +8,9 @@ supply <- read_parquet("prep/supply.parquet.gzip")
 supply %>% 
   count(award_level)
 
+supply %>% count(ciptitle)
+s
+
 supply %>% 
   glimpse()
 
@@ -244,7 +247,7 @@ cz_year %>%
                           mean_airea_posts / mean_job_posts, NA_real_),
     mean_pop_year = mean(cz_pop_year, na.rm = TRUE),
     posts_per_1000 = if_else(mean_pop_year > 0,
-                              (mean_job_posts / mean_pop_year) * 1000, NA_real_)
+                              (mean_airea_posts / mean_pop_year) * 1000, NA_real_)
   ) %>% 
   write_csv("prep/demand-nat-ave.csv")
 
